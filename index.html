@@ -1,0 +1,2741 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FileQuest — Hệ thống Làm Nhiệm Vụ Nhận File Free & Xuất Bản Internet</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+  <style>
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #090d16; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    .fade-in { animation: fadeIn 0.25s ease-out forwards; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes pulseGlow {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.45); }
+      50% { box-shadow: 0 0 0 12px rgba(16, 185, 129, 0); }
+    }
+    .pulse-ready { animation: pulseGlow 1.8s infinite; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white">
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
+
+  <!-- Top Navigation Bar -->
+  <header id="main-header" class="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+      <!-- Brand -->
+      <div class="flex items-center gap-2.5 cursor-pointer" onclick="exitSpecialViewsAndGoHome()">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+          <i data-lucide="folder-down" class="w-5 h-5 text-white"></i>
+        </div>
+        <div>
+          <span class="font-extrabold text-lg tracking-tight bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">FileQuest</span>
+          <span class="hidden sm:inline-block text-[11px] font-semibold uppercase tracking-wider px-1.5 py-0.5 ml-1 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">AUTO FILE</span>
+        </div>
+      </div>
+
+      <!-- Mode Switcher & User Unlocked Vault Summary -->
+      <div class="flex items-center gap-2 sm:gap-3">
+        <button type="button" onclick="exitSpecialViewsAndGoHome(); switchUserTab('vault');" class="flex items-center gap-2 bg-slate-800/90 hover:bg-slate-800 border border-slate-700/80 px-3 py-1.5 rounded-xl text-xs sm:text-sm transition">
+          <i data-lucide="package-check" class="w-4 h-4 text-emerald-400"></i>
+          <span class="text-slate-400 hidden md:inline">Kho File:</span>
+          <span id="header-unlocked-count" class="font-bold text-emerald-400">0 File</span>
+        </button>
+
+        <div class="flex bg-slate-800 p-1 rounded-xl border border-slate-700">
+          <button type="button" id="btn-mode-user" onclick="switchMode('user')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all bg-indigo-600 text-white shadow">
+            <i data-lucide="layers" class="w-4 h-4"></i>
+            <span>Nhận File</span>
+          </button>
+          <button type="button" id="btn-mode-publish" onclick="openPublishCenter()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all text-emerald-300 hover:text-white hover:bg-emerald-600/20">
+            <i data-lucide="globe" class="w-4 h-4"></i>
+            <span class="hidden sm:inline">Đăng Lên Internet</span>
+            <span class="sm:hidden">Đăng Web</span>
+          </button>
+          <button type="button" id="btn-mode-admin" onclick="switchMode('admin')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all text-slate-300 hover:text-white">
+            <i data-lucide="shield-check" class="w-4 h-4"></i>
+            <span>Admin</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Wrapper -->
+  <main class="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8">
+
+    <!-- ==================== VIEW 0: INTERMEDIATE 3S COUNTDOWN GATE ==================== -->
+    <section id="view-countdown-gate" class="hidden max-w-xl mx-auto my-6 sm:my-12 fade-in">
+      <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+        <!-- Decorative Top Gradient Bar -->
+        <div class="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-500"></div>
+
+        <!-- Preview Banner (Only shown in Admin Test Preview mode) -->
+        <div id="gate-preview-badge" class="hidden mb-4 bg-amber-500/15 border border-amber-500/40 text-amber-300 text-xs font-semibold px-3.5 py-2 rounded-xl flex items-center justify-between">
+          <span class="flex items-center gap-1.5"><i data-lucide="eye" class="w-4 h-4"></i> Chế độ xem thử Trang Đệm Chuyển Tầng (Admin Demo)</span>
+          <button type="button" onclick="exitSpecialViewsAndGoHome()" class="underline hover:text-white">Thoát xem thử</button>
+        </div>
+
+        <!-- Step Header -->
+        <div class="text-center space-y-2">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 text-xs font-bold uppercase tracking-wider">
+            <i data-lucide="shield-check" class="w-4 h-4"></i>
+            <span id="gate-step-pill">Xác minh vượt link đa tầng</span>
+          </div>
+          <h1 id="gate-heading" class="text-xl sm:text-2xl font-extrabold text-white pt-1">Hoàn thành Tầng 1/3!</h1>
+          <p id="gate-subtext" class="text-xs sm:text-sm text-slate-400">Hệ thống đang chuẩn bị liên kết cho <strong class="text-indigo-300">Tầng 2/3</strong>. Vui lòng chờ bộ đếm kết thúc để tiếp tục nhận File Free.</p>
+        </div>
+
+        <!-- Task Info Pill -->
+        <div class="mt-5 bg-slate-950/90 border border-slate-800 rounded-2xl p-4 flex items-center justify-between gap-3">
+          <div class="min-w-0">
+            <div class="text-[11px] uppercase tracking-wider text-slate-500 font-semibold">Tài nguyên đang mở khóa</div>
+            <div id="gate-task-title" class="text-sm font-bold text-white truncate mt-0.5">Đang tải thông tin nhiệm vụ...</div>
+          </div>
+          <span id="gate-file-meta" class="shrink-0 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold">FREE FILE</span>
+        </div>
+
+        <!-- Visual Multi-Layer Progress Bar -->
+        <div class="mt-6 space-y-2">
+          <div class="flex items-center justify-between text-xs font-semibold">
+            <span class="text-slate-400">Tiến trình vượt link</span>
+            <span id="gate-progress-text" class="text-indigo-400">Tầng 1 → Tầng 2 / 3</span>
+          </div>
+          <div id="gate-steps-visual" class="grid grid-cols-3 gap-2">
+            <!-- Step bars injected by JS -->
+          </div>
+        </div>
+
+        <!-- Countdown Circle & Action Button -->
+        <div class="mt-7 bg-slate-950 border border-slate-800/90 rounded-2xl p-5 text-center space-y-4">
+          <div class="flex items-center justify-center gap-3">
+            <div id="gate-timer-ring" class="w-14 h-14 rounded-2xl bg-indigo-500/15 border border-indigo-500/40 flex items-center justify-center text-2xl font-extrabold text-indigo-400 font-mono">
+              3
+            </div>
+            <div class="text-left">
+              <div id="gate-status-label" class="text-sm font-bold text-white">Đang kiểm tra phiên chuyển tầng...</div>
+              <div class="text-xs text-slate-400">Không đóng trình duyệt để giữ tiến trình mở khóa tự động.</div>
+            </div>
+          </div>
+
+          <button type="button" id="btn-gate-continue" disabled onclick="proceedToNextGateLayer()"
+            class="w-full py-3.5 px-5 rounded-2xl font-bold text-sm sm:text-base transition-all flex items-center justify-center gap-2 bg-slate-800 text-slate-400 border border-slate-700 cursor-not-allowed">
+            <i data-lucide="hourglass" class="w-4 h-4 animate-spin"></i>
+            <span>Vui lòng đợi 3s...</span>
+          </button>
+        </div>
+
+        <div class="mt-5 text-center">
+          <button type="button" onclick="exitSpecialViewsAndGoHome()" class="text-xs text-slate-500 hover:text-slate-300 transition">
+            ← Quay về danh sách nhiệm vụ
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 1: USER VIEW ==================== -->
+    <section id="view-user" class="space-y-6 fade-in">
+      <!-- User Identity & Vault Stats Card -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+          <div class="flex-1">
+            <div class="flex items-center gap-2 text-indigo-400 text-xs font-semibold uppercase tracking-wider mb-1">
+              <i data-lucide="user-check" class="w-4 h-4"></i>
+              <span>Định danh nhận tài nguyên</span>
+            </div>
+            <h1 class="text-xl sm:text-2xl font-bold text-white">Xin chào, <span id="display-username" class="text-indigo-400">Khách</span>!</h1>
+            <p class="text-slate-400 text-sm mt-1">Vượt link xong hệ thống sẽ <strong>tự động cấp File Free ngay lập tức</strong> và lưu vào Kho File của bạn.</p>
+            
+            <form id="user-profile-form" class="mt-4 flex flex-col sm:flex-row gap-2.5 max-w-md">
+              <input type="text" id="input-username" required maxlength="40" placeholder="VD: HoangDev_0988..." 
+                class="flex-1 bg-slate-950 border border-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 outline-none transition" />
+              <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 active:scale-[0.99] text-white font-semibold text-sm px-4 py-2.5 rounded-xl transition flex items-center justify-center gap-1.5 shadow-lg shadow-indigo-600/20">
+                <i data-lucide="save" class="w-4 h-4"></i>
+                <span>Lưu định danh</span>
+              </button>
+            </form>
+          </div>
+
+          <!-- Stats Grid -->
+          <div class="grid grid-cols-3 gap-3 sm:gap-4 lg:w-auto">
+            <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-3.5 sm:p-4 text-center">
+              <div class="text-xs text-slate-400 mb-1">File đã mở khóa</div>
+              <div id="stat-unlocked" class="text-base sm:text-xl font-extrabold text-emerald-400">0</div>
+            </div>
+            <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-3.5 sm:p-4 text-center">
+              <div class="text-xs text-slate-400 mb-1">Chờ duyệt</div>
+              <div id="stat-pending" class="text-base sm:text-xl font-extrabold text-amber-400">0</div>
+            </div>
+            <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-3.5 sm:p-4 text-center">
+              <div class="text-xs text-slate-400 mb-1">Tổng nhiệm vụ</div>
+              <div id="stat-total-tasks" class="text-base sm:text-xl font-extrabold text-indigo-400">0</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- User Sub-Navigation Tabs -->
+      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+        <div class="flex flex-wrap gap-2">
+          <button type="button" id="tab-user-tasks" onclick="switchUserTab('tasks')" class="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-800 text-white border border-slate-700 flex items-center gap-2 transition">
+            <i data-lucide="gift" class="w-4 h-4 text-indigo-400"></i>
+            <span>Nhiệm vụ nhận File</span>
+            <span id="badge-active-tasks" class="bg-indigo-600 text-white text-xs px-2 py-0.5 rounded-full">0</span>
+          </button>
+          <button type="button" id="tab-user-vault" onclick="switchUserTab('vault')" class="px-4 py-2 rounded-xl text-sm font-semibold text-slate-400 hover:text-white hover:bg-slate-900 border border-transparent flex items-center gap-2 transition">
+            <i data-lucide="folder-check" class="w-4 h-4 text-emerald-400"></i>
+            <span>Kho File Đã Nhận</span>
+            <span id="badge-user-vault" class="bg-emerald-500/20 text-emerald-300 text-xs px-2 py-0.5 rounded-full">0</span>
+          </button>
+          <button type="button" id="tab-user-history" onclick="switchUserTab('history')" class="px-4 py-2 rounded-xl text-sm font-semibold text-slate-400 hover:text-white hover:bg-slate-900 border border-transparent flex items-center gap-2 transition">
+            <i data-lucide="history" class="w-4 h-4 text-amber-400"></i>
+            <span>Lịch sử nộp bài</span>
+            <span id="badge-user-history" class="bg-slate-800 text-slate-300 text-xs px-2 py-0.5 rounded-full">0</span>
+          </button>
+        </div>
+
+        <!-- Category Filter -->
+        <div id="user-filter-bar" class="flex items-center gap-2">
+          <select id="filter-task-type" onchange="renderUserTasks()" class="bg-slate-900 border border-slate-700 text-slate-200 text-xs sm:text-sm rounded-xl px-3 py-2 outline-none focus:border-indigo-500">
+            <option value="ALL">Tất cả loại nhiệm vụ</option>
+            <option value="LINK4M">Vượt link Link4m (Tự động)</option>
+            <option value="ZALO_SPREAD">Rải link nhóm Zalo</option>
+            <option value="ZALO_JOIN">Tham gia nhóm / Khác</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- User Tab 1: Available Tasks Grid -->
+      <div id="user-panel-tasks" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <!-- Rendered by JS -->
+      </div>
+
+      <!-- User Tab 2: Unlocked File Vault -->
+      <div id="user-panel-vault" class="hidden grid grid-cols-1 md:grid-cols-2 gap-5">
+        <!-- Rendered by JS -->
+      </div>
+
+      <!-- User Tab 3: Submission History -->
+      <div id="user-panel-history" class="hidden space-y-4">
+        <!-- Rendered by JS -->
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 2: ADMIN LOCK SCREEN ==================== -->
+    <section id="view-admin-login" class="hidden max-w-md mx-auto my-10 fade-in">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-2xl">
+        <div class="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center mx-auto mb-4">
+          <i data-lucide="lock" class="w-6 h-6 text-indigo-400"></i>
+        </div>
+        <h2 class="text-xl font-bold text-center text-white">Khu Vực Quản Trị Viên</h2>
+        <p class="text-sm text-slate-400 text-center mt-1.5">Nhập mật khẩu quản trị để cấu hình API Link4m đa tầng, đăng File Free, duyệt bằng chứng và xuất bản web.</p>
+        
+        <form id="admin-login-form" class="mt-6 space-y-4">
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Mật khẩu Admin</label>
+            <div class="relative">
+              <input type="password" id="admin-password-input" required placeholder="Nhập mật khẩu..." 
+                class="w-full bg-slate-950 border border-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 rounded-xl px-4 py-3 text-sm text-white outline-none transition pr-10" />
+              <button type="button" onclick="togglePasswordVisibility()" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white">
+                <i id="eye-icon" data-lucide="eye" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+          <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 rounded-xl text-sm transition shadow-lg shadow-indigo-600/25 flex items-center justify-center gap-2">
+            <i data-lucide="unlock" class="w-4 h-4"></i>
+            <span>Mở khóa Admin Panel</span>
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 3: ADMIN PANEL VIEW ==================== -->
+    <section id="view-admin-panel" class="hidden space-y-6 fade-in">
+      <!-- Admin Header Banner -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">ADMIN ONLINE</span>
+            <span id="admin-api-status-badge" class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-800 text-slate-300 border border-slate-700">API Link4m: Chưa cấu hình</span>
+          </div>
+          <h2 class="text-xl font-bold text-white mt-1.5">Quản Trị Nhiệm Vụ File Free, Link4m Đa Tầng & Xuất Bản</h2>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <button type="button" onclick="previewCountdownGateDemo()" class="bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/40 px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition">
+            <i data-lucide="play-circle" class="w-4 h-4"></i>
+            <span>Xem thử Trang Đệm 3s</span>
+          </button>
+          <button type="button" onclick="adminLogout()" class="bg-slate-800 hover:bg-rose-500/20 hover:text-rose-400 hover:border-rose-500/40 border border-slate-700 text-slate-300 px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition">
+            <i data-lucide="log-out" class="w-4 h-4"></i>
+            <span>Khóa Admin</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Admin Navigation Tabs -->
+      <div class="flex flex-wrap gap-2 border-b border-slate-800 pb-3">
+        <button type="button" id="tab-admin-tasks" onclick="switchAdminTab('tasks')" class="px-4 py-2 rounded-xl text-sm font-semibold bg-indigo-600 text-white flex items-center gap-2 transition">
+          <i data-lucide="file-plus-2" class="w-4 h-4"></i>
+          <span>Quản lý Nhiệm vụ & File Free</span>
+        </button>
+        <button type="button" id="tab-admin-reviews" onclick="switchAdminTab('reviews')" class="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-900 text-slate-400 hover:text-white border border-slate-800 flex items-center gap-2 transition">
+          <i data-lucide="check-square" class="w-4 h-4"></i>
+          <span>Duyệt bằng chứng</span>
+          <span id="badge-admin-pending" class="bg-amber-500 text-slate-950 font-bold text-xs px-2 py-0.5 rounded-full">0</span>
+        </button>
+        <button type="button" id="tab-admin-api" onclick="switchAdminTab('api')" class="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-900 text-slate-400 hover:text-white border border-slate-800 flex items-center gap-2 transition">
+          <i data-lucide="settings" class="w-4 h-4"></i>
+          <span>Cấu hình API Link4m & Sao lưu</span>
+        </button>
+        <button type="button" id="tab-admin-publish" onclick="switchAdminTab('publish')" class="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-900 text-emerald-300 hover:text-white border border-emerald-500/30 flex items-center gap-2 transition">
+          <i data-lucide="globe" class="w-4 h-4"></i>
+          <span>Đăng Lên Internet Thực Tế</span>
+        </button>
+      </div>
+
+      <!-- Admin Tab 1: Create & Manage Tasks + Free Files -->
+      <div id="admin-panel-tasks" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Form Column -->
+        <div class="lg:col-span-6">
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+            <div class="flex items-center justify-between mb-4">
+              <h3 id="task-form-title" class="font-bold text-base text-white flex items-center gap-2">
+                <i data-lucide="folder-plus" class="w-5 h-5 text-indigo-400"></i>
+                <span>Tạo nhiệm vụ tặng File Free</span>
+              </h3>
+              <button type="button" id="btn-cancel-edit" onclick="resetTaskForm()" class="hidden text-xs text-slate-400 hover:text-white underline">Hủy sửa</button>
+            </div>
+
+            <form id="admin-task-form" class="space-y-4">
+              <input type="hidden" id="edit-task-id" value="" />
+              <input type="hidden" id="task-auto-token" value="" />
+              
+              <!-- Basic Info -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-medium text-slate-300 mb-1">Tên nhiệm vụ / Tên File *</label>
+                  <input type="text" id="task-title" required placeholder="VD: Source Code Shop Game PHP v2"
+                    class="w-full bg-slate-950 border border-slate-700 focus:border-indigo-500 rounded-xl px-3.5 py-2 text-sm text-white outline-none" />
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-slate-300 mb-1">Định dạng / Dung lượng file *</label>
+                  <input type="text" id="task-file-meta" required placeholder="VD: .ZIP • 48.5 MB (Google Drive)"
+                    class="w-full bg-slate-950 border border-slate-700 focus:border-indigo-500 rounded-xl px-3.5 py-2 text-sm text-white outline-none" />
+                </div>
+              </div>
+
+              <!-- Reward File Box -->
+              <div class="bg-emerald-950/20 border border-emerald-500/30 rounded-xl p-3.5 space-y-3">
+                <div class="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <i data-lucide="gift" class="w-4 h-4"></i>
+                  <span>Phần thưởng File Free (Tự động mở khi vượt xong link)</span>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div class="sm:col-span-2">
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Link tải File Free (Drive / Mediafire / Mega) *</label>
+                    <input type="url" id="task-file-url" required placeholder="https://drive.google.com/file/d/..."
+                      class="w-full bg-slate-950 border border-slate-700 focus:border-emerald-500 rounded-xl px-3 py-2 text-sm text-white outline-none" />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Mật khẩu giải nén (Nếu có)</label>
+                    <input type="text" id="task-file-pass" placeholder="VD: 123456"
+                      class="w-full bg-slate-950 border border-slate-700 focus:border-emerald-500 rounded-xl px-3 py-2 text-sm text-white outline-none" />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Task Type -->
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1">Loại nhiệm vụ *</label>
+                <select id="task-type" onchange="toggleLink4mBuilder()" class="w-full bg-slate-950 border border-slate-700 focus:border-indigo-500 rounded-xl px-3 py-2 text-sm text-white outline-none">
+                  <option value="LINK4M">Vượt link Link4m Đa Tầng (Chèn trang đệm 3s & Tự cấp File)</option>
+                  <option value="ZALO_SPREAD">Rải link nhóm Zalo (Nộp ảnh duyệt)</option>
+                  <option value="ZALO_JOIN">Tham gia nhóm Zalo / Nhiệm vụ khác</option>
+                </select>
+              </div>
+
+              <!-- Link4m Multi-Layer Generator Box -->
+              <div id="link4m-builder-box" class="bg-indigo-950/25 border border-indigo-500/30 rounded-xl p-3.5 space-y-3">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-bold text-indigo-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <i data-lucide="layers" class="w-4 h-4"></i>
+                    <span>Tạo Link4m Đa Tầng + Trang Đệm 3s Tự Động</span>
+                  </span>
+                  <span class="text-[11px] text-emerald-400 font-semibold">Auto-Unlock</span>
+                </div>
+
+                <p class="text-[11px] text-slate-400 leading-relaxed">
+                  Hệ thống tự động bọc ngược từ <strong>Tầng N</strong> (trỏ về URL mở khóa tự động của web này) về <strong>Tầng 1</strong>, tự chèn <strong>Trang Đệm Đếm Ngược 3s</strong> ở giữa mỗi tầng.
+                </p>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div class="sm:col-span-2">
+                    <label class="block text-xs font-medium text-slate-300 mb-1">URL gốc của trang web này (Tự động nhận diện)</label>
+                    <input type="url" id="link4m-base-web-url" placeholder="https://your-domain.com/index.html"
+                      class="w-full bg-slate-950 border border-slate-700 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs text-slate-200 font-mono outline-none" />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Số tầng vượt link</label>
+                    <select id="link4m-layers" class="w-full bg-slate-950 border border-slate-700 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs sm:text-sm text-white outline-none">
+                      <option value="1">1 Tầng</option>
+                      <option value="2" selected>2 Tầng (1 Trang đệm 3s)</option>
+                      <option value="3">3 Tầng (2 Trang đệm 3s)</option>
+                      <option value="4">4 Tầng (3 Trang đệm 3s)</option>
+                      <option value="5">5 Tầng (4 Trang đệm 3s)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2">
+                  <button type="button" id="btn-generate-link4m" onclick="generateMultiLayerLink4mWithGate()"
+                    class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-3.5 py-2 rounded-xl flex items-center gap-1.5 transition shadow">
+                    <i data-lucide="wand-2" class="w-3.5 h-3.5"></i>
+                    <span>Tạo Chuỗi Link4m Đa Tầng</span>
+                  </button>
+                  <button type="button" onclick="previewCountdownGateDemo()"
+                    class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold px-3.5 py-2 rounded-xl flex items-center gap-1.5 transition">
+                    <i data-lucide="eye" class="w-3.5 h-3.5 text-indigo-400"></i>
+                    <span>Xem thử Trang Đệm 3s</span>
+                  </button>
+                </div>
+
+                <!-- Progress / Log output for Link4m API -->
+                <div id="link4m-progress-log" class="hidden bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-[11px] font-mono text-slate-300 space-y-1 max-h-40 overflow-y-auto"></div>
+              </div>
+
+              <!-- Final Task URL & Backup Secret Code -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-medium text-slate-300 mb-1">Link Tầng 1 (User bấm để bắt đầu) *</label>
+                  <input type="url" id="task-url" required placeholder="https://link4m.com/..."
+                    class="w-full bg-slate-950 border border-slate-700 focus:border-indigo-500 rounded-xl px-3.5 py-2 text-sm text-white outline-none" />
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-slate-300 mb-1">Mã dự phòng / Key thủ công (Tùy chọn)</label>
+                  <input type="text" id="task-secret" placeholder="VD: VIP2TANG (Nếu user nhập tay)"
+                    class="w-full bg-slate-950 border border-slate-700 focus:border-indigo-500 rounded-xl px-3.5 py-2 text-sm text-white outline-none" />
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1">Hướng dẫn thực hiện chi tiết *</label>
+                <textarea id="task-desc" required rows="3" placeholder="Hướng dẫn user vượt link qua các tầng trang đệm 3s để tự động nhận File Free..."
+                  class="w-full bg-slate-950 border border-slate-700 focus:border-indigo-500 rounded-xl px-3.5 py-2 text-sm text-white outline-none"></textarea>
+              </div>
+
+              <button type="submit" id="btn-save-task" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 rounded-xl text-sm transition shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-2">
+                <i data-lucide="check" class="w-4 h-4"></i>
+                <span>Đăng nhiệm vụ & File Free</span>
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Existing Tasks List Column -->
+        <div class="lg:col-span-6 space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="font-bold text-base text-white">Danh sách nhiệm vụ đang quản lý (<span id="admin-task-count">0</span>)</h3>
+          </div>
+          <div id="admin-tasks-list" class="space-y-3">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Admin Tab 2: Review User Submissions -->
+      <div id="admin-panel-reviews" class="hidden space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <h3 class="font-bold text-base text-white">Danh sách bằng chứng người dùng đã nộp</h3>
+          <select id="filter-admin-submissions" onchange="renderAdminSubmissions()" class="bg-slate-900 border border-slate-700 text-slate-200 text-xs sm:text-sm rounded-xl px-3 py-2 outline-none">
+            <option value="PENDING">Đang chờ duyệt</option>
+            <option value="ALL">Tất cả trạng thái</option>
+            <option value="APPROVED">Đã duyệt / Tự mở khóa</option>
+            <option value="REJECTED">Đã từ chối</option>
+          </select>
+        </div>
+
+        <div id="admin-submissions-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+
+      <!-- Admin Tab 3: Link4m API Config & Backup Data -->
+      <div id="admin-panel-api" class="hidden grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Link4m Token Config Card -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+          <h3 class="font-bold text-base text-white flex items-center gap-2">
+            <i data-lucide="key-round" class="w-5 h-5 text-indigo-400"></i>
+            <span>Cấu hình API Token Link4m</span>
+          </h3>
+          <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
+            Lấy API Token trong trang quản trị tài khoản <strong>link4m.co</strong> (Mục Công cụ → API Rút gọn nhanh). Lưu ý: Để Link4m chuyển hướng về <strong>Trang Đệm 3s</strong> và <strong>Tự động mở khóa File</strong>, hãy chạy file web này trên hosting/tên miền thật (không dùng `file://`).
+          </p>
+
+          <form id="link4m-config-form" class="space-y-3">
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1">Link4m API Token *</label>
+              <input type="text" id="input-link4m-token" placeholder="Dán mã API Token Link4m của bạn tại đây..."
+                class="w-full bg-slate-950 border border-slate-700 focus:border-indigo-500 rounded-xl px-3.5 py-2.5 text-sm font-mono text-indigo-300 outline-none" />
+            </div>
+            <div class="flex flex-wrap gap-2.5">
+              <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-xl flex items-center gap-1.5 transition">
+                <i data-lucide="save" class="w-4 h-4"></i>
+                <span>Lưu API Token</span>
+              </button>
+              <button type="button" onclick="testLink4mConnection()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-xl flex items-center gap-1.5 transition">
+                <i data-lucide="wifi" class="w-4 h-4 text-emerald-400"></i>
+                <span>Test kết nối API</span>
+              </button>
+            </div>
+          </form>
+
+          <div id="api-test-result" class="hidden bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs font-mono text-slate-300"></div>
+        </div>
+
+        <!-- Backup / Restore Card -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+          <h3 class="font-bold text-base text-white flex items-center gap-2">
+            <i data-lucide="database" class="w-5 h-5 text-emerald-400"></i>
+            <span>Xuất / Nhập dữ liệu hệ thống (JSON)</span>
+          </h3>
+          <p class="text-xs sm:text-sm text-slate-400">Sao lưu toàn bộ danh sách nhiệm vụ, token mở khóa tự động, link File Free và lịch sử của người dùng ra chuỗi JSON.</p>
+          
+          <div class="flex flex-wrap gap-2.5">
+            <button type="button" onclick="exportSystemData()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-sm font-semibold px-3.5 py-2 rounded-xl flex items-center gap-1.5 transition">
+              <i data-lucide="copy" class="w-4 h-4"></i>
+              <span>Xuất & Copy JSON</span>
+            </button>
+            <button type="button" onclick="importSystemData()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-semibold px-3.5 py-2 rounded-xl flex items-center gap-1.5 transition">
+              <i data-lucide="upload" class="w-4 h-4"></i>
+              <span>Nạp từ JSON</span>
+            </button>
+            <button type="button" onclick="resetToDefaultSamples()" class="bg-slate-800 hover:bg-rose-600 text-slate-200 hover:text-white text-xs sm:text-sm font-semibold px-3.5 py-2 rounded-xl flex items-center gap-1.5 transition border border-slate-700">
+              <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+              <span>Khôi phục 3 mẫu</span>
+            </button>
+          </div>
+
+          <div>
+            <textarea id="json-data-box" rows="5" placeholder="Dán chuỗi JSON vào đây để khôi phục hoặc bấm 'Xuất & Copy JSON'..."
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs font-mono text-emerald-300 outline-none focus:border-indigo-500"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Admin Tab 4: Real-World Internet Deployment Center -->
+      <div id="admin-panel-publish" class="hidden space-y-6">
+        <!-- Top Readiness & Standalone File Download Banner -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl space-y-4">
+          <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+            <div>
+              <span class="text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">REAL-WORLD INTERNET DEPLOYMENT</span>
+              <h3 class="text-lg sm:text-xl font-extrabold text-white mt-1.5">Đăng Lên Internet Thực Tế Để Người Khác Truy Cập</h3>
+              <p class="text-xs sm:text-sm text-slate-400 mt-0.5">Toàn bộ ứng dụng nằm gọn trong một file <code class="text-emerald-300">index.html</code>. Bạn có thể đưa lên hosting miễn phí trong vài phút để người khác mở link và nhận file trực tiếp.</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button type="button" onclick="runRealWorldChecklist(true)" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition">
+                <i data-lucide="list-checks" class="w-4 h-4 text-indigo-400"></i>
+                <span>Kiểm tra Checklist</span>
+              </button>
+              <button type="button" onclick="downloadStandaloneIndexHtml()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1.5 shadow-lg shadow-emerald-600/25 transition">
+                <i data-lucide="download-cloud" class="w-4 h-4"></i>
+                <span>Tải index.html</span>
+              </button>
+              <button type="button" onclick="copyStandaloneHtmlSource()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition">
+                <i data-lucide="copy" class="w-4 h-4 text-emerald-400"></i>
+                <span>Copy Code HTML</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Live Pre-Deploy Checklist -->
+          <div id="real-deploy-checklist" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <!-- Rendered by JS -->
+          </div>
+
+          <!-- Starter Files Pack Buttons -->
+          <div class="bg-slate-950/90 border border-slate-800 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="text-xs text-slate-300">
+              <strong class="text-indigo-300">File khởi tạo đi kèm khi deploy:</strong> Tải thêm <code class="text-emerald-300">.nojekyll</code> (tránh GitHub Pages bỏ qua file/thư mục bắt đầu bằng dấu chấm) hoặc <code class="text-emerald-300">README.md</code>.
+            </div>
+            <div class="flex flex-wrap gap-2 shrink-0">
+              <button type="button" onclick="downloadNoJekyllFile()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700 flex items-center gap-1.5 transition">
+                <i data-lucide="file-code" class="w-3.5 h-3.5 text-amber-400"></i>
+                <span>Tải .nojekyll</span>
+              </button>
+              <button type="button" onclick="downloadReadmeFile()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700 flex items-center gap-1.5 transition">
+                <i data-lucide="book-open" class="w-3.5 h-3.5 text-indigo-400"></i>
+                <span>Tải README.md</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Interactive Setup Wizard for 4 Hosting Platforms -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <!-- Left: Platform Selector & Step-by-Step Setup Wizard -->
+          <div class="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 space-y-5">
+            <div class="flex items-center justify-between gap-2">
+              <h4 class="font-bold text-base text-white flex items-center gap-2">
+                <i data-lucide="compass" class="w-5 h-5 text-emerald-400"></i>
+                <span>Hướng Dẫn Từng Bước Theo Nền Tảng Miễn Phí</span>
+              </h4>
+              <span id="wizard-platform-badge" class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">Khuyên dùng</span>
+            </div>
+
+            <!-- 4 Platform Tabs -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              <button type="button" id="guide-plat-github" onclick="selectDeployGuidePlatform('github')"
+                class="p-3 rounded-xl border border-indigo-500 bg-indigo-500/15 text-white text-left transition flex flex-col gap-0.5">
+                <span class="text-xs font-bold">GitHub Pages</span>
+                <span class="text-[10px] text-indigo-300">Miễn phí • Ổn định</span>
+              </button>
+              <button type="button" id="guide-plat-cloudflare" onclick="selectDeployGuidePlatform('cloudflare')"
+                class="p-3 rounded-xl border border-slate-800 bg-slate-950 text-slate-300 hover:border-slate-700 text-left transition flex flex-col gap-0.5">
+                <span class="text-xs font-bold">Cloudflare Pages</span>
+                <span class="text-[10px] text-slate-400">CDN toàn cầu nhanh</span>
+              </button>
+              <button type="button" id="guide-plat-netlify" onclick="selectDeployGuidePlatform('netlify')"
+                class="p-3 rounded-xl border border-slate-800 bg-slate-950 text-slate-300 hover:border-slate-700 text-left transition flex flex-col gap-0.5">
+                <span class="text-xs font-bold">Netlify Drop</span>
+                <span class="text-[10px] text-slate-400">Kéo thả lên ngay</span>
+              </button>
+              <button type="button" id="guide-plat-vercel" onclick="selectDeployGuidePlatform('vercel')"
+                class="p-3 rounded-xl border border-slate-800 bg-slate-950 text-slate-300 hover:border-slate-700 text-left transition flex flex-col gap-0.5">
+                <span class="text-xs font-bold">Vercel</span>
+                <span class="text-[10px] text-slate-400">CLI / Web deploy</span>
+              </button>
+            </div>
+
+            <!-- Domain Calculator Input for Wizard -->
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-3.5 space-y-2">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <label class="text-xs font-semibold text-slate-300">Tên dự án / Username / Repo để xem trước URL thật:</label>
+                <div class="flex gap-2">
+                  <input type="text" id="wizard-owner" value="ten-cua-ban" oninput="renderDeployWizard()" placeholder="username"
+                    class="w-32 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-xs font-mono text-white outline-none focus:border-indigo-500" />
+                  <input type="text" id="wizard-repo" value="filequest-free" oninput="renderDeployWizard()" placeholder="ten-repo"
+                    class="w-36 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-xs font-mono text-emerald-300 outline-none focus:border-indigo-500" />
+                </div>
+              </div>
+              <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/80">
+                <div class="text-xs font-mono text-indigo-300 break-all" id="wizard-live-url">https://ten-cua-ban.github.io/filequest-free/</div>
+                <button type="button" onclick="applyWizardUrlToLink4mBuilder()" class="shrink-0 text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600 text-indigo-200 hover:text-white border border-indigo-500/30 transition">
+                  Áp dụng URL này cho Link4m
+                </button>
+              </div>
+            </div>
+
+            <!-- Dynamic Step-by-Step Guide Content -->
+            <div id="deploy-wizard-steps" class="space-y-3">
+              <!-- Rendered by JS -->
+            </div>
+          </div>
+
+          <!-- Right: Real-World Technical Notes (Storage, CORS, Multi-Device) -->
+          <div class="lg:col-span-5 space-y-5">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 space-y-4">
+              <h4 class="font-bold text-base text-white flex items-center gap-2">
+                <i data-lucide="cpu" class="w-5 h-5 text-amber-400"></i>
+                <span>Lưu Ý Kỹ Thuật Khi Chạy Internet Thực Tế</span>
+              </h4>
+
+              <!-- Note 1: localStorage vs Shared State -->
+              <div class="bg-slate-950 border border-slate-800 rounded-xl p-3.5 space-y-1.5">
+                <div class="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
+                  <i data-lucide="hard-drive" class="w-3.5 h-3.5"></i>
+                  <span>1. localStorage trình duyệt vs. Dữ liệu dùng chung đa thiết bị</span>
+                </div>
+                <p class="text-xs text-slate-400 leading-relaxed">
+                  Bản HTML tĩnh lưu dữ liệu bằng <code class="text-slate-200">localStorage</code> ngay trên trình duyệt của từng người dùng. Khi bạn đăng web lên internet:
+                </p>
+                <ul class="text-xs text-slate-300 space-y-1 list-disc list-inside">
+                  <li><strong>Người dùng</strong> tự lưu Kho File &amp; lịch sử trên thiết bị của họ.</li>
+                  <li><strong>Danh sách nhiệm vụ Admin tạo</strong> chỉ nằm trên trình duyệt của Admin trừ khi bạn dùng <em>Xuất / Nhập JSON</em> để chia sẻ hoặc nối thêm backend/database (Supabase, Firebase, Cloudflare KV...).</li>
+                </ul>
+              </div>
+
+              <!-- Note 2: Link4m CORS on Real Domain -->
+              <div class="bg-slate-950 border border-slate-800 rounded-xl p-3.5 space-y-1.5">
+                <div class="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
+                  <i data-lucide="share-2" class="w-3.5 h-3.5"></i>
+                  <span>2. Link4m API &amp; CORS khi chạy domain thật vs. localhost/sandbox</span>
+                </div>
+                <p class="text-xs text-slate-400 leading-relaxed">
+                  Khi chạy trên <code class="text-slate-200">file://</code> hoặc khung preview cô lập, trình duyệt dễ chặn gọi trực tiếp API rút gọn hoặc chuyển hướng về trang đệm <code class="text-slate-200">?gate=1</code>. Trên tên miền HTTPS thật (GitHub Pages, Cloudflare Pages, Vercel, Netlify), luồng chuyển hướng <code class="text-indigo-300">?gate=1</code> và tự mở khóa <code class="text-emerald-300">?unlock=...</code> hoạt động ổn định nhất.
+                </p>
+              </div>
+
+              <!-- Note 3: Security Reminder -->
+              <div class="bg-slate-950 border border-slate-800 rounded-xl p-3.5 space-y-1.5">
+                <div class="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                  <i data-lucide="shield-alert" class="w-3.5 h-3.5"></i>
+                  <span>3. Nguyên tắc bảo mật phía client</span>
+                </div>
+                <p class="text-xs text-slate-400 leading-relaxed">
+                  Mật khẩu Admin (<code class="text-slate-200">nhiemvufile</code>) và API Token Link4m nằm ở phía trình duyệt/cấu hình cục bộ. Không dùng cho dữ liệu nhạy cảm cao hoặc tài sản có giá trị tài chính lớn nếu chưa có lớp xác thực máy chủ.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==================== MODAL: AUTO-UNLOCKED FILE CELEBRATION ==================== -->
+  <div id="modal-auto-unlocked" class="fixed inset-0 z-50 hidden bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-emerald-500/40 rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl fade-in relative overflow-hidden">
+      <div class="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-emerald-400 via-teal-400 to-indigo-500"></div>
+      
+      <div class="flex items-start justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/40 flex items-center justify-center shrink-0">
+            <i data-lucide="party-popper" class="w-6 h-6 text-emerald-400"></i>
+          </div>
+          <div>
+            <span class="text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300">MỞ KHÓA TỰ ĐỘNG THÀNH CÔNG</span>
+            <h3 class="text-lg sm:text-xl font-extrabold text-white mt-1">Chúc mừng! File Free đã sẵn sàng</h3>
+          </div>
+        </div>
+        <button type="button" onclick="closeAutoUnlockModal()" class="text-slate-400 hover:text-white p-1.5 rounded-xl bg-slate-800">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="mt-5 space-y-4">
+        <p class="text-xs sm:text-sm text-slate-300">
+          Hệ thống đã xác nhận hoàn thành vượt link cho tài khoản <strong id="unlocked-modal-user" class="text-indigo-400">@User</strong> và lưu tài nguyên vào <strong>Kho File Đã Nhận</strong>.
+        </p>
+
+        <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4 space-y-3">
+          <div>
+            <div class="text-[11px] text-slate-400">Tên tài nguyên:</div>
+            <div id="unlocked-modal-title" class="font-bold text-white text-sm sm:text-base mt-0.5">Source Code VIP</div>
+            <div id="unlocked-modal-meta" class="text-xs text-emerald-400 mt-0.5">.ZIP • Google Drive</div>
+          </div>
+
+          <div class="pt-2 border-t border-slate-800/80 space-y-2">
+            <div class="text-xs text-slate-400 break-all">
+              <span class="font-semibold text-slate-300">Liên kết tải trực tiếp:</span>
+              <a id="unlocked-modal-url-text" href="#" target="_blank" rel="noopener noreferrer" class="text-emerald-400 hover:underline ml-1">https://...</a>
+            </div>
+            <div id="unlocked-modal-pass-row" class="hidden flex items-center justify-between bg-slate-900 px-3 py-2 rounded-xl border border-slate-800 text-xs">
+              <span class="text-slate-400">Mật khẩu giải nén: <strong id="unlocked-modal-pass" class="text-amber-300 font-mono text-sm">123456</strong></span>
+              <button type="button" id="btn-copy-unlocked-pass" class="text-indigo-400 hover:text-indigo-300 font-bold">Copy Pass</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-2.5 pt-1">
+          <a id="unlocked-modal-download-btn" href="#" target="_blank" rel="noopener noreferrer"
+            class="flex-1 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/25 transition">
+            <i data-lucide="download" class="w-4 h-4"></i>
+            <span>Tải File Ngay Bây Giờ</span>
+          </a>
+          <button type="button" id="btn-copy-unlocked-url"
+            class="py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-sm flex items-center justify-center gap-1.5 transition">
+            <i data-lucide="copy" class="w-4 h-4"></i>
+            <span>Copy Link</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: MANUAL PROOF / BACKUP KEY SUBMISSION (USER) ==================== -->
+  <div id="modal-submit-proof" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl fade-in max-h-[92vh] overflow-y-auto">
+      <div class="flex items-start justify-between gap-3 border-b border-slate-800 pb-3.5">
+        <div>
+          <span id="modal-task-badge" class="text-[11px] font-bold uppercase px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300">Loại nhiệm vụ</span>
+          <h3 id="modal-task-title" class="text-lg font-bold text-white mt-1">Tên nhiệm vụ</h3>
+        </div>
+        <button type="button" onclick="closeSubmitModal()" class="text-slate-400 hover:text-white p-1 rounded-lg bg-slate-800">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="mt-4 space-y-4">
+        <!-- Task Guide & Link -->
+        <div class="bg-slate-950 border border-slate-800 rounded-xl p-3.5 text-sm text-slate-300 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-slate-400">Tài nguyên nhận được:</span>
+            <span id="modal-task-filemeta" class="font-bold text-emerald-400 text-xs">.ZIP • Google Drive</span>
+          </div>
+          <div>
+            <div class="text-xs text-slate-400 mb-1">Hướng dẫn thực hiện:</div>
+            <p id="modal-task-desc" class="text-xs sm:text-sm text-slate-200 whitespace-pre-line leading-relaxed"></p>
+          </div>
+          <div class="pt-1">
+            <a id="modal-task-link" href="#" target="_blank" rel="noopener noreferrer" 
+              class="inline-flex items-center gap-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-2 rounded-xl transition shadow">
+              <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+              <span>Mở liên kết nhiệm vụ ngay</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Mode Indicator -->
+        <div id="modal-instant-code-hint" class="hidden bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3 text-xs text-emerald-300 flex items-start gap-2">
+          <i data-lucide="zap" class="w-4 h-4 shrink-0 mt-0.5 text-emerald-400"></i>
+          <span>Thông thường hệ thống sẽ <strong>tự động mở khóa</strong> khi bạn vượt xong tầng link cuối. Bạn cũng có thể nhập mã dự phòng tại đây nếu có.</span>
+        </div>
+
+        <form id="proof-submission-form" class="space-y-3.5">
+          <input type="hidden" id="submit-task-id" />
+          
+          <div>
+            <label id="proof-text-label" class="block text-xs font-semibold text-slate-300 mb-1">Nhập Mã dự phòng hoặc Bằng chứng thực hiện *</label>
+            <textarea id="proof-text" required rows="2" placeholder="Nhập mã dự phòng hoặc dán link/tên nhóm Zalo đã rải..."
+              class="w-full bg-slate-950 border border-slate-700 focus:border-indigo-500 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none"></textarea>
+          </div>
+
+          <div id="proof-image-section">
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Ảnh chụp màn hình bằng chứng (Bắt buộc với nhiệm vụ Zalo)</label>
+            <input type="file" id="proof-image-input" accept="image/*" onchange="handleImageUpload(event)"
+              class="w-full text-xs text-slate-400 file:mr-3 file:py-2 file:px-3.5 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-indigo-300 hover:file:bg-slate-700 cursor-pointer" />
+            <div id="proof-image-preview-box" class="hidden mt-2.5 relative inline-block">
+              <img id="proof-image-preview" src="" alt="Preview" class="max-h-36 rounded-xl border border-slate-700 object-contain" />
+              <button type="button" onclick="clearProofImage()" class="absolute -top-2 -right-2 bg-rose-600 text-white rounded-full p-1 shadow">
+                <i data-lucide="x" class="w-3 h-3"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="flex justify-end gap-2.5 pt-2 border-t border-slate-800">
+            <button type="button" onclick="closeSubmitModal()" class="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold bg-slate-800 text-slate-300 hover:text-white">Hủy</button>
+            <button type="submit" id="btn-submit-proof" class="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/20 flex items-center gap-1.5">
+              <i data-lucide="unlock" class="w-4 h-4"></i>
+              <span>Xác nhận & Mở khóa File</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: ADMIN REJECT REASON ==================== -->
+  <div id="modal-reject-reason" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-5 shadow-2xl fade-in">
+      <h3 class="text-base font-bold text-white flex items-center gap-2">
+        <i data-lucide="alert-circle" class="w-5 h-5 text-rose-400"></i>
+        <span>Từ chối bằng chứng</span>
+      </h3>
+      <p class="text-xs text-slate-400 mt-1">Nhập lý do từ chối để người dùng biết và thực hiện lại cho đúng.</p>
+      <form id="reject-reason-form" class="mt-4 space-y-3">
+        <input type="hidden" id="reject-submission-id" />
+        <input type="text" id="reject-reason-text" required placeholder="VD: Sai mã xác nhận / Ảnh chụp chưa rõ nhóm Zalo..."
+          class="w-full bg-slate-950 border border-slate-700 focus:border-rose-500 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none" />
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeRejectModal()" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-800 text-slate-300">Hủy</button>
+          <button type="submit" class="px-4 py-2 rounded-xl text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white">Xác nhận từ chối</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: IMAGE LIGHTBOX ==================== -->
+  <div id="modal-lightbox" onclick="this.classList.add('hidden')" class="fixed inset-0 z-50 hidden bg-slate-950/90 backdrop-blur-sm flex items-center justify-center p-4 cursor-zoom-out">
+    <img id="lightbox-img" src="" alt="Bằng chứng phóng to" class="max-w-full max-h-[88vh] rounded-2xl border border-slate-700 shadow-2xl" />
+  </div>
+
+  <script>
+    // ==================== CONSTANTS & SAMPLE DATA ====================
+    const ADMIN_PASSWORD = 'nhiemvufile';
+    const STORAGE_KEYS = {
+      USER_PROFILE: 'filequest_user_v3',
+      TASKS: 'filequest_tasks_v3',
+      SUBMISSIONS: 'filequest_submissions_v3',
+      IN_PROGRESS: 'filequest_in_progress_v3',
+      LINK4M_TOKEN: 'filequest_link4m_token_v3',
+      ADMIN_SESSION: 'filequest_admin_auth_v3'
+    };
+
+    const DEPLOY_GUIDES = {
+      github: {
+        name: 'GitHub Pages',
+        badge: 'Khuyên dùng • Miễn phí vĩnh viễn',
+        buildUrl: (owner, repo) => `https://${slugifyPart(owner, 'ten-cua-ban')}.github.io/${slugifyPart(repo, 'filequest-free')}/`,
+        steps: [
+          {
+            title: 'Bước 1: Tải file index.html và .nojekyll',
+            desc: 'Bấm nút "Tải index.html" ở phía trên (hoặc "Copy Code HTML"). Nếu muốn, tải thêm .nojekyll để đảm bảo trang tĩnh phục vụ đúng định dạng.'
+          },
+          {
+            title: 'Bước 2: Tạo Repository mới trên GitHub',
+            desc: 'Đăng nhập github.com → Tạo repo mới (ví dụ đặt tên "filequest-free", chọn Public) → Bấm "uploading an existing file" và kéo thả file index.html vào.'
+          },
+          {
+            title: 'Bước 3: Bật GitHub Pages & nhận link công khai',
+            desc: 'Vào tab Settings → Pages → mục Build and deployment chọn "Deploy from a branch", chọn nhánh main và thư mục /(root), bấm Save. Đợi khoảng 1-2 phút để nhận URL công khai và gửi cho người dùng.'
+          },
+          {
+            title: 'Bước 4: Cập nhật URL gốc khi tạo chuỗi Link4m đa tầng',
+            desc: 'Mở Admin (nhiemvufile) → dán URL GitHub Pages thật vào ô "URL gốc của trang web này" trước khi bấm "Tạo Chuỗi Link4m Đa Tầng" để link trỏ chuẩn về trang đệm 3s và tự mở khóa file.'
+          }
+        ]
+      },
+      cloudflare: {
+        name: 'Cloudflare Pages',
+        badge: 'CDN toàn cầu • Tốc độ cao',
+        buildUrl: (owner, repo) => `https://${slugifyPart(repo, 'filequest-free')}.pages.dev/`,
+        steps: [
+          {
+            title: 'Bước 1: Chuẩn bị thư mục chứa index.html',
+            desc: 'Tải file index.html và đặt vào một thư mục riêng trên máy (ví dụ thư mục deploy-web chứa duy nhất file index.html).'
+          },
+          {
+            title: 'Bước 2: Tạo dự án Direct Upload trên Cloudflare Pages',
+            desc: 'Đăng nhập Cloudflare Dashboard → Workers & Pages → Create → Pages → chọn "Upload assets" (Direct Upload), nhập tên dự án và tải thư mục chứa index.html lên.'
+          },
+          {
+            title: 'Bước 3: Xuất bản & chia sẻ link .pages.dev',
+            desc: 'Cloudflare tự cấp chứng chỉ HTTPS miễn phí và địa chỉ *.pages.dev ngay sau khi tải lên. Người dùng có thể truy cập trực tiếp từ mọi thiết bị.'
+          }
+        ]
+      },
+      netlify: {
+        name: 'Netlify Drop',
+        badge: 'Kéo thả tức thì • Không cần Git',
+        buildUrl: (owner, repo) => `https://${slugifyPart(repo, 'filequest-free')}.netlify.app/`,
+        steps: [
+          {
+            title: 'Bước 1: Tải file index.html về máy',
+            desc: 'Bấm "Tải index.html" và đặt file vào một thư mục riêng (ví dụ netlify-site/index.html).'
+          },
+          {
+            title: 'Bước 2: Kéo thả thư mục vào Netlify Drop',
+            desc: 'Mở trang Netlify Drop (app.netlify.com/drop) → kéo thả thư mục chứa index.html trực tiếp vào vùng thả file.'
+          },
+          {
+            title: 'Bước 3: Nhận URL công khai & tùy chỉnh tên miền',
+            desc: 'Netlify xuất bản ngay lập tức và cấp đường dẫn HTTPS. Bạn có thể đổi tên site hoặc gắn domain riêng trong phần Site configuration.'
+          }
+        ]
+      },
+      vercel: {
+        name: 'Vercel',
+        badge: 'Triển khai nhanh • HTTPS mặc định',
+        buildUrl: (owner, repo) => `https://${slugifyPart(repo, 'filequest-free')}.vercel.app/`,
+        steps: [
+          {
+            title: 'Bước 1: Chuẩn bị file index.html trong thư mục dự án',
+            desc: 'Tải index.html và đặt vào một thư mục dự án sạch (có thể kèm README.md).'
+          },
+          {
+            title: 'Bước 2: Deploy qua Vercel Web hoặc CLI',
+            desc: 'Bạn có thể đẩy lên Git repo rồi import vào vercel.com, hoặc chạy lệnh `npx vercel --prod` trong thư mục chứa index.html nếu đã cài Node.js.'
+          },
+          {
+            title: 'Bước 3: Kiểm tra luồng ?gate=1 và ?unlock=',
+            desc: 'Sau khi có link *.vercel.app, mở thử trang chủ, kiểm tra tab Kho File và tạo nhiệm vụ Link4m đa tầng trỏ về đúng domain Vercel.'
+          }
+        ]
+      }
+    };
+
+    function slugifyPart(raw, fallback) {
+      const cleaned = String(raw || '')
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9-]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+      return cleaned || fallback;
+    }
+
+    function getBaseWebUrl() {
+      return window.location.origin + window.location.pathname;
+    }
+
+    function generateRandomToken(len = 12) {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+      let out = '';
+      for (let i = 0; i < len; i++) {
+        out += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      return out;
+    }
+
+    const SAMPLE_TASKS = [
+      {
+        id: 'task_file_1',
+        title: 'Source Code Web Bán Tài Khoản Game PHP + SQL',
+        fileMeta: '.ZIP • 42.8 MB (Google Drive)',
+        fileUrl: 'https://drive.google.com/drive/folders/demo-source-code-vip',
+        filePassword: 'filequest2026',
+        type: 'LINK4M',
+        layers: 2,
+        autoToken: 'auto_tok_9821a',
+        url: 'https://link4m.com/demo-2-tang',
+        secretCode: 'VIP2TANG',
+        description: 'Bước 1: Bấm "Vượt link tự động nhận File" để qua Tầng 1 Link4m.\nBước 2: Hệ thống tự chuyển qua Trang Đệm Đếm Ngược 3s để sang Tầng 2.\nBước 3: Vượt xong Tầng 2, web tự động mở khóa ngay link Google Drive + Pass giải nén!',
+        active: true,
+        createdAt: Date.now() - 3600000 * 6
+      },
+      {
+        id: 'task_file_2',
+        title: 'Bộ Tool Auto Reg & Nuôi Nick Zalo PC Bản Quyền',
+        fileMeta: '.RAR • 115 MB (MediaFire)',
+        fileUrl: 'https://www.mediafire.com/file/demo-tool-zalo-vip.rar',
+        filePassword: 'khongcopass',
+        type: 'LINK4M',
+        layers: 3,
+        autoToken: 'auto_tok_7743b',
+        url: 'https://link4m.com/demo-3-tang',
+        secretCode: 'TOOL3TANG',
+        description: 'Bước 1: Vượt qua chuỗi 3 tầng Link4m (có trang đệm 3s giữa mỗi tầng).\nBước 2: Sau tầng 3, hệ thống tự động cấp link tải MediaFire tốc độ cao vào Kho File của bạn.',
+        active: true,
+        createdAt: Date.now() - 3600000 * 4
+      },
+      {
+        id: 'task_file_3',
+        title: 'Pack 500+ Preset Lightroom & CapCut Pro 2026',
+        fileMeta: '.ZIP • 1.2 GB (Google Drive)',
+        fileUrl: 'https://drive.google.com/file/d/demo-preset-pack-2026',
+        filePassword: 'presetfree',
+        type: 'ZALO_SPREAD',
+        layers: 0,
+        autoToken: '',
+        url: 'https://zalo.me/g/cong-dong-share-file',
+        secretCode: '',
+        description: 'Bước 1: Chia sẻ link nhóm Zalo cộng đồng vào ít nhất 3 nhóm Zalo công khai (trên 100 thành viên).\nBước 2: Chụp ảnh màn hình tin nhắn đã gửi trong các nhóm.\nBước 3: Tải ảnh bằng chứng lên để Admin duyệt và mở khóa kho Preset.',
+        active: true,
+        createdAt: Date.now() - 3600000 * 2
+      }
+    ];
+
+    // ==================== STATE MANAGEMENT ====================
+    let state = {
+      user: { username: '' },
+      tasks: [],
+      submissions: [],
+      inProgressIds: [],
+      link4mToken: '',
+      currentProofBase64: '',
+      activeDeployPlatform: 'github',
+      gateState: {
+        active: false,
+        isDemo: false,
+        nextUrl: '',
+        step: 2,
+        total: 3,
+        taskId: '',
+        timerInterval: null,
+        unlockedTimestamp: 0
+      }
+    };
+
+    function loadState() {
+      try {
+        const savedUser = JSON.parse(localStorage.getItem(STORAGE_KEYS.USER_PROFILE));
+        if (savedUser && typeof savedUser === 'object') {
+          state.user.username = savedUser.username || '';
+        }
+
+        const savedTasks = JSON.parse(localStorage.getItem(STORAGE_KEYS.TASKS));
+        if (Array.isArray(savedTasks) && savedTasks.length > 0) {
+          state.tasks = savedTasks;
+        } else {
+          state.tasks = [...SAMPLE_TASKS];
+          saveTasks();
+        }
+
+        const savedSubs = JSON.parse(localStorage.getItem(STORAGE_KEYS.SUBMISSIONS));
+        if (Array.isArray(savedSubs)) state.submissions = savedSubs;
+
+        const savedProgress = JSON.parse(localStorage.getItem(STORAGE_KEYS.IN_PROGRESS));
+        if (Array.isArray(savedProgress)) state.inProgressIds = savedProgress;
+
+        state.link4mToken = localStorage.getItem(STORAGE_KEYS.LINK4M_TOKEN) || '';
+      } catch (err) {
+        console.error('Lỗi tải dữ liệu:', err);
+        state.tasks = [...SAMPLE_TASKS];
+      }
+    }
+
+    function saveUser() { localStorage.setItem(STORAGE_KEYS.USER_PROFILE, JSON.stringify(state.user)); }
+    function saveTasks() { localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(state.tasks)); }
+    function saveSubmissions() { localStorage.setItem(STORAGE_KEYS.SUBMISSIONS, JSON.stringify(state.submissions)); }
+    function saveInProgress() { localStorage.setItem(STORAGE_KEYS.IN_PROGRESS, JSON.stringify(state.inProgressIds)); }
+    function saveLink4mToken() { localStorage.setItem(STORAGE_KEYS.LINK4M_TOKEN, state.link4mToken); }
+
+    function ensureUserIdentity() {
+      if (!state.user.username || !state.user.username.trim()) {
+        const randomNum = Math.floor(1000 + Math.random() * 9000);
+        state.user.username = `User_${randomNum}`;
+        saveUser();
+      }
+      return state.user.username;
+    }
+
+    // ==================== UTILITIES ====================
+    function formatTime(ts) {
+      const d = new Date(ts);
+      return d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) + ' - ' + d.toLocaleDateString('vi-VN');
+    }
+
+    function escapeHTML(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function copyTextToClipboard(text, label = 'Đã sao chép!') {
+      const tempInput = document.createElement('textarea');
+      tempInput.value = text;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      try {
+        document.execCommand('copy');
+        showToast(label, 'success');
+      } catch (err) {
+        showToast('Không thể tự động sao chép, vui lòng bôi đen copy thủ công.', 'error');
+      }
+      document.body.removeChild(tempInput);
+    }
+
+    function cleanUrlQueryParams() {
+      if (window.history && window.history.replaceState) {
+        window.history.replaceState({}, document.title, getBaseWebUrl());
+      }
+    }
+
+    function getTaskTypeMeta(task) {
+      if (task.type === 'LINK4M') {
+        const layerText = task.layers && task.layers > 0 ? ` (${task.layers} tầng)` : '';
+        return {
+          label: `Vượt link Link4m${layerText}`,
+          badgeClass: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
+          icon: 'layers'
+        };
+      }
+      if (task.type === 'ZALO_SPREAD') {
+        return {
+          label: 'Rải link nhóm Zalo',
+          badgeClass: 'bg-sky-500/15 text-sky-300 border-sky-500/30',
+          icon: 'share-2'
+        };
+      }
+      return {
+        label: 'Tham gia nhóm / Khác',
+        badgeClass: 'bg-purple-500/15 text-purple-300 border-purple-500/30',
+        icon: 'users'
+      };
+    }
+
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      const styles = {
+        success: 'bg-slate-900 border-emerald-500/50 text-emerald-300',
+        error: 'bg-slate-900 border-rose-500/50 text-rose-300',
+        info: 'bg-slate-900 border-indigo-500/50 text-indigo-300'
+      };
+      const icons = { success: 'check-circle-2', error: 'alert-triangle', info: 'info' };
+
+      toast.className = `pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-xl border shadow-xl text-xs sm:text-sm font-medium fade-in ${styles[type] || styles.info}`;
+      toast.innerHTML = `<i data-lucide="${icons[type] || 'info'}" class="w-4 h-4 shrink-0"></i><span>${escapeHTML(message)}</span>`;
+      container.appendChild(toast);
+      lucide.createIcons();
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(6px)';
+        toast.style.transition = 'all 0.2s ease';
+        setTimeout(() => toast.remove(), 220);
+      }, 3600);
+    }
+
+    // ==================== CORE FEATURE 1: 3S COUNTDOWN GATE ====================
+    function showCountdownGate({ taskId, step, total, nextUrl, isDemo = false }) {
+      if (state.gateState.timerInterval) {
+        clearInterval(state.gateState.timerInterval);
+      }
+
+      const task = state.tasks.find(t => t.id === taskId);
+      const completedLayer = Math.max(1, step - 1);
+
+      state.gateState = {
+        active: true,
+        isDemo,
+        nextUrl,
+        step,
+        total,
+        taskId,
+        timerInterval: null,
+        unlockedTimestamp: 0
+      };
+
+      document.getElementById('view-user').classList.add('hidden');
+      document.getElementById('view-admin-login').classList.add('hidden');
+      document.getElementById('view-admin-panel').classList.add('hidden');
+      document.getElementById('view-countdown-gate').classList.remove('hidden');
+
+      const demoBadge = document.getElementById('gate-preview-badge');
+      if (isDemo) demoBadge.classList.remove('hidden');
+      else demoBadge.classList.add('hidden');
+
+      document.getElementById('gate-step-pill').textContent = `Trang Đệm Chuyển Tầng • Tầng ${step}/${total}`;
+      document.getElementById('gate-heading').textContent = `Hoàn thành Tầng ${completedLayer}/${total}!`;
+      document.getElementById('gate-subtext').innerHTML = `Hệ thống đang chuẩn bị liên kết cho <strong class="text-indigo-300">Tầng ${step}/${total}</strong>. Vui lòng đợi 3 giây rồi bấm nút bên dưới để tiếp tục.`;
+      document.getElementById('gate-task-title').textContent = task ? task.title : 'Gói Tài Nguyên File Free VIP';
+      document.getElementById('gate-file-meta').textContent = task && task.fileMeta ? task.fileMeta : 'FREE FILE';
+      document.getElementById('gate-progress-text').textContent = `Đã xong Tầng ${completedLayer} → Chuẩn bị Tầng ${step}/${total}`;
+
+      const visualContainer = document.getElementById('gate-steps-visual');
+      visualContainer.style.gridTemplateColumns = `repeat(${Math.min(total, 6)}, minmax(0, 1fr))`;
+      let barsHtml = '';
+      for (let i = 1; i <= total; i++) {
+        if (i < step) {
+          barsHtml += `<div class="h-2.5 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/40" title="Tầng ${i}: Đã hoàn thành"></div>`;
+        } else if (i === step) {
+          barsHtml += `<div class="h-2.5 rounded-full bg-indigo-500 animate-pulse" title="Tầng ${i}: Chuẩn bị vượt"></div>`;
+        } else {
+          barsHtml += `<div class="h-2.5 rounded-full bg-slate-800" title="Tầng ${i}: Chưa mở"></div>`;
+        }
+      }
+      visualContainer.innerHTML = barsHtml;
+
+      let remaining = 3;
+      const ring = document.getElementById('gate-timer-ring');
+      const statusLabel = document.getElementById('gate-status-label');
+      const btnContinue = document.getElementById('btn-gate-continue');
+
+      ring.textContent = remaining;
+      ring.className = 'w-14 h-14 rounded-2xl bg-indigo-500/15 border border-indigo-500/40 flex items-center justify-center text-2xl font-extrabold text-indigo-400 font-mono';
+      statusLabel.textContent = 'Đang xác thực lượt chuyển tầng...';
+
+      btnContinue.disabled = true;
+      btnContinue.className = 'w-full py-3.5 px-5 rounded-2xl font-bold text-sm sm:text-base transition-all flex items-center justify-center gap-2 bg-slate-800 text-slate-400 border border-slate-700 cursor-not-allowed';
+      btnContinue.innerHTML = `<i data-lucide="hourglass" class="w-4 h-4 animate-spin"></i><span>Vui lòng đợi ${remaining}s...</span>`;
+      lucide.createIcons();
+
+      state.gateState.timerInterval = setInterval(() => {
+        remaining -= 1;
+        if (remaining > 0) {
+          ring.textContent = remaining;
+          btnContinue.innerHTML = `<i data-lucide="hourglass" class="w-4 h-4 animate-spin"></i><span>Vui lòng đợi ${remaining}s...</span>`;
+          lucide.createIcons();
+        } else {
+          clearInterval(state.gateState.timerInterval);
+          state.gateState.timerInterval = null;
+          state.gateState.unlockedTimestamp = Date.now();
+
+          ring.innerHTML = `<i data-lucide="check" class="w-7 h-7 text-emerald-400"></i>`;
+          ring.className = 'w-14 h-14 rounded-2xl bg-emerald-500/15 border border-emerald-500/40 flex items-center justify-center';
+          statusLabel.textContent = `Đã sẵn sàng chuyển sang Tầng ${step}/${total}!`;
+
+          btnContinue.disabled = false;
+          btnContinue.className = 'w-full py-3.5 px-5 rounded-2xl font-extrabold text-sm sm:text-base transition-all flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white shadow-xl shadow-emerald-600/30 cursor-pointer pulse-ready';
+          btnContinue.innerHTML = `<span>Tiếp tục sang Tầng ${step}/${total}</span><i data-lucide="arrow-right" class="w-5 h-5"></i>`;
+          lucide.createIcons();
+        }
+      }, 1000);
+    }
+
+    function proceedToNextGateLayer() {
+      if (!state.gateState.unlockedTimestamp) {
+        showToast('Vui lòng đợi hết 3 giây đếm ngược!', 'error');
+        return;
+      }
+
+      if (state.gateState.isDemo) {
+        showToast('Demo hoàn tất! Trên thực tế nút này sẽ mở link Link4m của Tầng tiếp theo.', 'success');
+        exitSpecialViewsAndGoHome();
+        return;
+      }
+
+      if (state.gateState.nextUrl) {
+        window.location.href = state.gateState.nextUrl;
+      } else {
+        showToast('Không tìm thấy liên kết tầng tiếp theo!', 'error');
+      }
+    }
+
+    function previewCountdownGateDemo() {
+      const sampleTask = state.tasks[0] || SAMPLE_TASKS[0];
+      showCountdownGate({
+        taskId: sampleTask.id,
+        step: 2,
+        total: 3,
+        nextUrl: '#demo',
+        isDemo: true
+      });
+    }
+
+    function exitSpecialViewsAndGoHome() {
+      if (state.gateState.timerInterval) {
+        clearInterval(state.gateState.timerInterval);
+        state.gateState.timerInterval = null;
+      }
+      state.gateState.active = false;
+      document.getElementById('view-countdown-gate').classList.add('hidden');
+      cleanUrlQueryParams();
+      switchMode('user');
+    }
+
+    // ==================== CORE FEATURE 2: AUTO-UNLOCK ON FINAL LAYER ====================
+    function processAutoUnlockFromUrl(taskId, token) {
+      const task = state.tasks.find(t => t.id === taskId);
+      if (!task) {
+        cleanUrlQueryParams();
+        showToast('Liên kết mở khóa không tồn tại hoặc nhiệm vụ đã bị xóa.', 'error');
+        return false;
+      }
+
+      if (task.autoToken && token !== task.autoToken) {
+        cleanUrlQueryParams();
+        showToast('Token xác thực mở khóa không hợp lệ! Vui lòng vượt lại đúng link nhiệm vụ.', 'error');
+        return false;
+      }
+
+      const activeUsername = ensureUserIdentity();
+
+      const existingApproved = state.submissions.find(
+        s => s.taskId === task.id && s.username === activeUsername && s.status === 'APPROVED'
+      );
+
+      if (!existingApproved) {
+        const autoSubmission = {
+          id: 'sub_auto_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+          taskId: task.id,
+          taskTitle: task.title,
+          taskType: task.type,
+          fileMeta: task.fileMeta,
+          fileUrl: task.fileUrl,
+          filePassword: task.filePassword || '',
+          username: activeUsername,
+          proofText: `[Tự động mở khóa] Hoàn thành vượt link ${task.layers || 1} tầng Link4m`,
+          proofImage: '',
+          status: 'APPROVED',
+          rejectReason: '',
+          submittedAt: Date.now()
+        };
+        state.submissions.unshift(autoSubmission);
+        saveSubmissions();
+      }
+
+      state.inProgressIds = state.inProgressIds.filter(id => id !== task.id);
+      saveInProgress();
+
+      cleanUrlQueryParams();
+
+      renderAllUserUI();
+      switchUserTab('vault');
+      openAutoUnlockModal(task, activeUsername);
+      return true;
+    }
+
+    function openAutoUnlockModal(task, username) {
+      document.getElementById('unlocked-modal-user').textContent = '@' + username;
+      document.getElementById('unlocked-modal-title').textContent = task.title;
+      document.getElementById('unlocked-modal-meta').textContent = task.fileMeta || 'File Free';
+
+      const urlAnchor = document.getElementById('unlocked-modal-url-text');
+      urlAnchor.href = task.fileUrl;
+      urlAnchor.textContent = task.fileUrl;
+
+      const downloadBtn = document.getElementById('unlocked-modal-download-btn');
+      downloadBtn.href = task.fileUrl;
+
+      const copyUrlBtn = document.getElementById('btn-copy-unlocked-url');
+      copyUrlBtn.onclick = () => copyTextToClipboard(task.fileUrl, 'Đã sao chép liên kết tải File Free!');
+
+      const passRow = document.getElementById('unlocked-modal-pass-row');
+      if (task.filePassword && task.filePassword.trim()) {
+        passRow.classList.remove('hidden');
+        document.getElementById('unlocked-modal-pass').textContent = task.filePassword;
+        document.getElementById('btn-copy-unlocked-pass').onclick = () =>
+          copyTextToClipboard(task.filePassword, 'Đã sao chép mật khẩu giải nén!');
+      } else {
+        passRow.classList.add('hidden');
+      }
+
+      document.getElementById('modal-auto-unlocked').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeAutoUnlockModal() {
+      document.getElementById('modal-auto-unlocked').classList.add('hidden');
+    }
+
+    // ==================== NAVIGATION & TABS ====================
+    function openPublishCenter() {
+      switchMode('admin');
+      if (sessionStorage.getItem(STORAGE_KEYS.ADMIN_SESSION) === 'true') {
+        switchAdminTab('publish');
+      } else {
+        showToast('Vui lòng nhập mật khẩu Admin (nhiemvufile) để mở Trung Tâm Xuất Bản.', 'info');
+      }
+    }
+
+    function switchMode(mode) {
+      const userView = document.getElementById('view-user');
+      const adminLoginView = document.getElementById('view-admin-login');
+      const adminPanelView = document.getElementById('view-admin-panel');
+      const gateView = document.getElementById('view-countdown-gate');
+      const btnUser = document.getElementById('btn-mode-user');
+      const btnAdmin = document.getElementById('btn-mode-admin');
+      const btnPublish = document.getElementById('btn-mode-publish');
+
+      gateView.classList.add('hidden');
+
+      if (mode === 'user') {
+        userView.classList.remove('hidden');
+        adminLoginView.classList.add('hidden');
+        adminPanelView.classList.add('hidden');
+
+        btnUser.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all bg-indigo-600 text-white shadow';
+        btnAdmin.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all text-slate-300 hover:text-white';
+        btnPublish.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all text-emerald-300 hover:text-white hover:bg-emerald-600/20';
+        renderAllUserUI();
+      } else {
+        userView.classList.add('hidden');
+        btnAdmin.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all bg-indigo-600 text-white shadow';
+        btnUser.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all text-slate-300 hover:text-white';
+        btnPublish.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all text-emerald-300 hover:text-white hover:bg-emerald-600/20';
+
+        const isAuthed = sessionStorage.getItem(STORAGE_KEYS.ADMIN_SESSION) === 'true';
+        if (isAuthed) {
+          adminLoginView.classList.add('hidden');
+          adminPanelView.classList.remove('hidden');
+          renderAllAdminUI();
+        } else {
+          adminLoginView.classList.remove('hidden');
+          adminPanelView.classList.add('hidden');
+          document.getElementById('admin-password-input').focus();
+        }
+      }
+      lucide.createIcons();
+    }
+
+    function switchUserTab(tab) {
+      const tabs = ['tasks', 'vault', 'history'];
+      const filterBar = document.getElementById('user-filter-bar');
+
+      tabs.forEach(t => {
+        const btn = document.getElementById(`tab-user-${t}`);
+        const panel = document.getElementById(`user-panel-${t}`);
+        if (t === tab) {
+          btn.className = 'px-4 py-2 rounded-xl text-sm font-semibold bg-slate-800 text-white border border-slate-700 flex items-center gap-2 transition';
+          panel.classList.remove('hidden');
+        } else {
+          btn.className = 'px-4 py-2 rounded-xl text-sm font-semibold text-slate-400 hover:text-white hover:bg-slate-900 border border-transparent flex items-center gap-2 transition';
+          panel.classList.add('hidden');
+        }
+      });
+
+      if (tab === 'tasks') {
+        filterBar.classList.remove('hidden');
+        renderUserTasks();
+      } else {
+        filterBar.classList.add('hidden');
+        if (tab === 'vault') renderUserVault();
+        if (tab === 'history') renderUserHistory();
+      }
+      lucide.createIcons();
+    }
+
+    function switchAdminTab(tab) {
+      const tabs = ['tasks', 'reviews', 'api', 'publish'];
+      tabs.forEach(t => {
+        const btn = document.getElementById(`tab-admin-${t}`);
+        const panel = document.getElementById(`admin-panel-${t}`);
+        if (t === tab) {
+          btn.className = 'px-4 py-2 rounded-xl text-sm font-semibold bg-indigo-600 text-white flex items-center gap-2 transition';
+          panel.classList.remove('hidden');
+        } else {
+          btn.className = t === 'publish'
+            ? 'px-4 py-2 rounded-xl text-sm font-semibold bg-slate-900 text-emerald-300 hover:text-white border border-emerald-500/30 flex items-center gap-2 transition'
+            : 'px-4 py-2 rounded-xl text-sm font-semibold bg-slate-900 text-slate-400 hover:text-white border border-slate-800 flex items-center gap-2 transition';
+          panel.classList.add('hidden');
+        }
+      });
+      if (tab === 'tasks') renderAdminTasks();
+      if (tab === 'reviews') renderAdminSubmissions();
+      if (tab === 'api') {
+        document.getElementById('input-link4m-token').value = state.link4mToken;
+      }
+      if (tab === 'publish') {
+        renderDeployCenter();
+      }
+      lucide.createIcons();
+    }
+
+    // ==================== USER LOGIC & RENDERING ====================
+    document.getElementById('user-profile-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const name = document.getElementById('input-username').value.trim();
+      if (!name) {
+        showToast('Vui lòng nhập tên hiển thị hoặc ID!', 'error');
+        return;
+      }
+      state.user.username = name;
+      saveUser();
+      renderAllUserUI();
+      showToast('Đã lưu định danh thành công!', 'success');
+    });
+
+    function getUserUnlockedSubmissions() {
+      if (!state.user.username) return [];
+      return state.submissions.filter(s => s.username === state.user.username && s.status === 'APPROVED');
+    }
+
+    function renderAllUserUI() {
+      const displayName = state.user.username || 'Khách (Chưa đặt tên)';
+      document.getElementById('display-username').textContent = displayName;
+      document.getElementById('input-username').value = state.user.username;
+
+      const userSubs = state.user.username
+        ? state.submissions.filter(s => s.username === state.user.username)
+        : [];
+      const unlockedSubs = userSubs.filter(s => s.status === 'APPROVED');
+      const pendingSubs = userSubs.filter(s => s.status === 'PENDING');
+      const activeTasksCount = state.tasks.filter(t => t.active).length;
+
+      document.getElementById('header-unlocked-count').textContent = `${unlockedSubs.length} File`;
+      document.getElementById('stat-unlocked').textContent = unlockedSubs.length;
+      document.getElementById('stat-pending').textContent = pendingSubs.length;
+      document.getElementById('stat-total-tasks').textContent = activeTasksCount;
+
+      document.getElementById('badge-active-tasks').textContent = activeTasksCount;
+      document.getElementById('badge-user-vault').textContent = unlockedSubs.length;
+      document.getElementById('badge-user-history').textContent = userSubs.length;
+
+      renderUserTasks();
+      renderUserVault();
+      renderUserHistory();
+    }
+
+    function renderUserTasks() {
+      const container = document.getElementById('user-panel-tasks');
+      const filterType = document.getElementById('filter-task-type').value;
+      const activeTasks = state.tasks.filter(t => t.active && (filterType === 'ALL' || t.type === filterType));
+
+      if (activeTasks.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full bg-slate-900/60 border border-slate-800 rounded-2xl p-10 text-center">
+            <i data-lucide="folder-search" class="w-10 h-10 text-slate-600 mx-auto mb-3"></i>
+            <p class="text-slate-400 text-sm">Chưa có nhiệm vụ nhận file nào trong danh mục này.</p>
+          </div>`;
+        lucide.createIcons();
+        return;
+      }
+
+      container.innerHTML = activeTasks.map(task => {
+        const meta = getTaskTypeMeta(task);
+        const approvedSub = state.user.username
+          ? state.submissions.find(s => s.taskId === task.id && s.username === state.user.username && s.status === 'APPROVED')
+          : null;
+        const pendingSub = state.user.username
+          ? state.submissions.find(s => s.taskId === task.id && s.username === state.user.username && s.status === 'PENDING')
+          : null;
+        const isInProgress = state.inProgressIds.includes(task.id);
+
+        let fileLockBox = '';
+        let actionArea = '';
+
+        if (approvedSub) {
+          fileLockBox = `
+            <div class="bg-emerald-950/30 border border-emerald-500/40 rounded-xl p-3 mb-3 space-y-2">
+              <div class="flex items-center justify-between text-xs font-bold text-emerald-400">
+                <span class="flex items-center gap-1"><i data-lucide="unlock" class="w-3.5 h-3.5"></i> ĐÃ MỞ KHÓA FILE</span>
+                <span>${escapeHTML(task.fileMeta)}</span>
+              </div>
+              ${task.filePassword ? `
+                <div class="flex items-center justify-between bg-slate-950/90 px-2.5 py-1.5 rounded-lg border border-slate-800 text-xs">
+                  <span class="text-slate-400">Pass giải nén: <strong class="text-amber-300 font-mono">${escapeHTML(task.filePassword)}</strong></span>
+                  <button type="button" onclick="copyTextToClipboard('${escapeHTML(task.filePassword)}', 'Đã copy mật khẩu giải nén!')" class="text-indigo-400 hover:text-indigo-300 font-semibold">Copy</button>
+                </div>` : ''}
+            </div>`;
+
+          actionArea = `
+            <div class="flex gap-2">
+              <a href="${escapeHTML(task.fileUrl)}" target="_blank" rel="noopener noreferrer"
+                class="flex-1 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-600/20 transition">
+                <i data-lucide="download" class="w-4 h-4"></i>
+                <span>Tải File Ngay</span>
+              </a>
+              <button type="button" onclick="copyTextToClipboard('${escapeHTML(task.fileUrl)}', 'Đã copy link tải File!')"
+                class="px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition" title="Copy link file">
+                <i data-lucide="copy" class="w-4 h-4"></i>
+              </button>
+            </div>`;
+        } else {
+          fileLockBox = `
+            <div class="bg-slate-950/90 border border-slate-800 rounded-xl p-3 mb-3 flex items-center justify-between gap-2">
+              <div class="flex items-center gap-2 min-w-0">
+                <div class="w-7 h-7 rounded-lg bg-slate-800 flex items-center justify-center shrink-0">
+                  <i data-lucide="lock" class="w-3.5 h-3.5 text-amber-400"></i>
+                </div>
+                <div class="truncate">
+                  <div class="text-[11px] text-slate-400">Phần thưởng khóa:</div>
+                  <div class="text-xs font-semibold text-slate-200 truncate">${escapeHTML(task.fileMeta)}</div>
+                </div>
+              </div>
+              <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-slate-800 text-slate-400 shrink-0">Locked</span>
+            </div>`;
+
+          if (pendingSub) {
+            actionArea = `
+              <div class="w-full py-2.5 px-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-bold flex items-center justify-center gap-1.5">
+                <i data-lucide="clock" class="w-4 h-4"></i>
+                <span>Đang chờ Admin duyệt mở File</span>
+              </div>`;
+          } else if (isInProgress) {
+            actionArea = `
+              <div class="flex gap-2">
+                <a href="${escapeHTML(task.url)}" target="_blank" rel="noopener noreferrer"
+                  class="flex-1 py-2.5 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition">
+                  <i data-lucide="external-link" class="w-4 h-4"></i>
+                  <span>Tiếp tục vượt link</span>
+                </a>
+                <button type="button" onclick="openSubmitModal('${task.id}')"
+                  class="px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center justify-center gap-1 transition" title="Nhập mã dự phòng / Nộp ảnh">
+                  <i data-lucide="key" class="w-4 h-4 text-emerald-400"></i>
+                  <span>${task.type === 'LINK4M' ? 'Mã dự phòng' : 'Nộp bài'}</span>
+                </button>
+              </div>`;
+          } else {
+            actionArea = `
+              <button type="button" onclick="acceptAndOpenTask('${task.id}')"
+                class="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20 transition">
+                <i data-lucide="external-link" class="w-4 h-4"></i>
+                <span>${task.type === 'LINK4M' ? 'Vượt link tự động nhận File' : 'Làm nhiệm vụ nhận File'}</span>
+              </button>`;
+          }
+        }
+
+        return `
+          <div class="bg-slate-900 border ${approvedSub ? 'border-emerald-500/40' : 'border-slate-800 hover:border-slate-700'} rounded-2xl p-5 flex flex-col justify-between transition shadow-lg">
+            <div>
+              <div class="flex items-center justify-between gap-2 mb-3">
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold border ${meta.badgeClass}">
+                  <i data-lucide="${meta.icon}" class="w-3.5 h-3.5"></i>
+                  ${meta.label}
+                </span>
+                ${task.type === 'LINK4M'
+                  ? `<span class="text-[11px] font-semibold text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md">Tự động cấp File</span>`
+                  : `<span class="text-[11px] font-semibold text-slate-400 bg-slate-800 px-2 py-0.5 rounded-md">Duyệt ảnh</span>`}
+              </div>
+
+              <h3 class="font-bold text-base text-white leading-snug mb-2">${escapeHTML(task.title)}</h3>
+              <p class="text-xs text-slate-400 whitespace-pre-line line-clamp-3 leading-relaxed mb-4">${escapeHTML(task.description)}</p>
+            </div>
+
+            <div>
+              ${fileLockBox}
+              <div class="pt-2 border-t border-slate-800/80">
+                ${actionArea}
+              </div>
+            </div>
+          </div>`;
+      }).join('');
+
+      lucide.createIcons();
+    }
+
+    function renderUserVault() {
+      const container = document.getElementById('user-panel-vault');
+      const unlocked = getUserUnlockedSubmissions();
+
+      if (!state.user.username) {
+        container.innerHTML = `
+          <div class="col-span-full bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center text-slate-400 text-sm">
+            Vui lòng nhập và lưu tên định danh ở khung phía trên hoặc vượt link để hệ thống tự tạo Kho File cho bạn.
+          </div>`;
+        return;
+      }
+
+      if (unlocked.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full bg-slate-900 border border-slate-800 rounded-2xl p-10 text-center space-y-2">
+            <i data-lucide="folder-lock" class="w-10 h-10 text-slate-600 mx-auto"></i>
+            <p class="text-slate-300 font-semibold text-sm">Kho File của bạn đang trống</p>
+            <p class="text-slate-500 text-xs">Hãy vượt link nhiệm vụ để hệ thống tự động mở khóa và lưu File tại đây.</p>
+          </div>`;
+        lucide.createIcons();
+        return;
+      }
+
+      container.innerHTML = unlocked.map(item => {
+        const liveTask = state.tasks.find(t => t.id === item.taskId);
+        const fileUrl = liveTask ? liveTask.fileUrl : item.fileUrl;
+        const filePass = liveTask ? liveTask.filePassword : item.filePassword;
+        const fileMeta = liveTask ? liveTask.fileMeta : (item.fileMeta || 'Tài nguyên Free');
+
+        return `
+          <div class="bg-slate-900 border border-emerald-500/30 rounded-2xl p-5 flex flex-col justify-between gap-4 shadow-lg">
+            <div class="space-y-2">
+              <div class="flex items-center justify-between gap-2">
+                <span class="px-2.5 py-0.5 rounded-lg text-[11px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">ĐÃ MỞ KHÓA</span>
+                <span class="text-xs text-slate-500">${formatTime(item.submittedAt)}</span>
+              </div>
+              <h4 class="font-bold text-white text-base">${escapeHTML(item.taskTitle)}</h4>
+              <div class="text-xs text-slate-400">Định dạng: <span class="text-slate-200 font-medium">${escapeHTML(fileMeta)}</span></div>
+
+              <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-2 mt-2">
+                <div class="text-xs text-slate-400 break-all">
+                  <span class="font-semibold text-slate-300">Link tải:</span>
+                  <a href="${escapeHTML(fileUrl)}" target="_blank" rel="noopener noreferrer" class="text-emerald-400 hover:underline ml-1">${escapeHTML(fileUrl)}</a>
+                </div>
+                ${filePass ? `
+                  <div class="flex items-center justify-between text-xs pt-1 border-t border-slate-800/80">
+                    <span class="text-slate-400">Mật khẩu giải nén: <strong class="text-amber-300 font-mono">${escapeHTML(filePass)}</strong></span>
+                    <button type="button" onclick="copyTextToClipboard('${escapeHTML(filePass)}', 'Đã copy mật khẩu giải nén!')" class="text-indigo-400 hover:text-indigo-300 font-semibold">Copy Pass</button>
+                  </div>` : ''}
+              </div>
+            </div>
+
+            <div class="flex gap-2.5">
+              <a href="${escapeHTML(fileUrl)}" target="_blank" rel="noopener noreferrer"
+                class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 transition shadow-lg shadow-emerald-600/20">
+                <i data-lucide="download" class="w-4 h-4"></i>
+                <span>Tải File Xuống</span>
+              </a>
+              <button type="button" onclick="copyTextToClipboard('${escapeHTML(fileUrl)}', 'Đã sao chép liên kết tải File!')"
+                class="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition">
+                <i data-lucide="copy" class="w-4 h-4"></i>
+                <span>Copy Link</span>
+              </button>
+            </div>
+          </div>`;
+      }).join('');
+
+      lucide.createIcons();
+    }
+
+    function acceptAndOpenTask(taskId) {
+      ensureUserIdentity();
+      renderAllUserUI();
+
+      const task = state.tasks.find(t => t.id === taskId);
+      if (!task) return;
+
+      if (!state.inProgressIds.includes(taskId)) {
+        state.inProgressIds.push(taskId);
+        saveInProgress();
+      }
+
+      window.open(task.url, '_blank', 'noopener,noreferrer');
+      renderUserTasks();
+
+      if (task.type === 'LINK4M') {
+        showToast('Đang mở Tầng 1 Link4m! Vượt xong các tầng web sẽ tự động cấp File Free.', 'info');
+      } else {
+        showToast('Đã mở liên kết nhiệm vụ! Hoàn thành xong hãy bấm "Nộp bài" để gửi ảnh bằng chứng.', 'info');
+      }
+    }
+
+    function openSubmitModal(taskId) {
+      ensureUserIdentity();
+      const task = state.tasks.find(t => t.id === taskId);
+      if (!task) return;
+
+      const meta = getTaskTypeMeta(task);
+      document.getElementById('submit-task-id').value = task.id;
+      document.getElementById('modal-task-badge').textContent = meta.label;
+      document.getElementById('modal-task-title').textContent = task.title;
+      document.getElementById('modal-task-filemeta').textContent = task.fileMeta || 'File Free';
+      document.getElementById('modal-task-desc').textContent = task.description;
+      document.getElementById('modal-task-link').href = task.url;
+
+      const hintBox = document.getElementById('modal-instant-code-hint');
+      const proofLabel = document.getElementById('proof-text-label');
+      const proofInput = document.getElementById('proof-text');
+      const imgSection = document.getElementById('proof-image-section');
+
+      if (task.secretCode) {
+        hintBox.classList.remove('hidden');
+        proofLabel.textContent = 'Nhập Mã dự phòng / Key mở khóa *';
+        proofInput.placeholder = 'Dán mã dự phòng nếu bạn không tự động chuyển hướng...';
+        imgSection.classList.add('hidden');
+      } else {
+        hintBox.classList.add('hidden');
+        proofLabel.textContent = 'Nội dung bằng chứng (Link nhóm Zalo / Tên tài khoản) *';
+        proofInput.placeholder = 'Nhập tên các nhóm Zalo đã rải link hoặc ghi chú xác minh...';
+        imgSection.classList.remove('hidden');
+      }
+
+      proofInput.value = '';
+      clearProofImage();
+      document.getElementById('modal-submit-proof').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeSubmitModal() {
+      document.getElementById('modal-submit-proof').classList.add('hidden');
+    }
+
+    function handleImageUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      if (file.size > 3 * 1024 * 1024) {
+        showToast('Ảnh quá lớn (tối đa 3MB). Vui lòng chọn ảnh nhẹ hơn.', 'error');
+        event.target.value = '';
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        state.currentProofBase64 = e.target.result;
+        document.getElementById('proof-image-preview').src = state.currentProofBase64;
+        document.getElementById('proof-image-preview-box').classList.remove('hidden');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function clearProofImage() {
+      state.currentProofBase64 = '';
+      document.getElementById('proof-image-input').value = '';
+      document.getElementById('proof-image-preview').src = '';
+      document.getElementById('proof-image-preview-box').classList.add('hidden');
+    }
+
+    document.getElementById('proof-submission-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const taskId = document.getElementById('submit-task-id').value;
+      const proofText = document.getElementById('proof-text').value.trim();
+      const task = state.tasks.find(t => t.id === taskId);
+
+      if (!task || !proofText) {
+        showToast('Vui lòng nhập đầy đủ thông tin xác nhận!', 'error');
+        return;
+      }
+
+      const activeUsername = ensureUserIdentity();
+
+      let isAutoUnlocked = false;
+      if (task.secretCode) {
+        if (proofText.toLowerCase() === task.secretCode.trim().toLowerCase()) {
+          isAutoUnlocked = true;
+        } else {
+          showToast('Mã dự phòng chưa chính xác! Vui lòng vượt hết các tầng link.', 'error');
+          return;
+        }
+      }
+
+      const newSubmission = {
+        id: 'sub_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+        taskId: task.id,
+        taskTitle: task.title,
+        taskType: task.type,
+        fileMeta: task.fileMeta,
+        fileUrl: task.fileUrl,
+        filePassword: task.filePassword || '',
+        username: activeUsername,
+        proofText: proofText,
+        proofImage: state.currentProofBase64 || '',
+        status: isAutoUnlocked ? 'APPROVED' : 'PENDING',
+        rejectReason: '',
+        submittedAt: Date.now()
+      };
+
+      state.submissions.unshift(newSubmission);
+      saveSubmissions();
+
+      state.inProgressIds = state.inProgressIds.filter(id => id !== taskId);
+      saveInProgress();
+
+      closeSubmitModal();
+      renderAllUserUI();
+
+      if (isAutoUnlocked) {
+        openAutoUnlockModal(task, activeUsername);
+      } else {
+        showToast('Đã gửi bằng chứng! File sẽ mở khóa ngay sau khi Admin duyệt.', 'info');
+      }
+    });
+
+    function renderUserHistory() {
+      const container = document.getElementById('user-panel-history');
+      if (!state.user.username) {
+        container.innerHTML = `
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center text-slate-400 text-sm">
+            Hãy nhập và lưu tên định danh của bạn để xem lịch sử làm nhiệm vụ.
+          </div>`;
+        return;
+      }
+
+      const mySubs = state.submissions.filter(s => s.username === state.user.username);
+      if (mySubs.length === 0) {
+        container.innerHTML = `
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center text-slate-400 text-sm">
+            Bạn chưa thực hiện nhiệm vụ nhận File nào.
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = mySubs.map(sub => {
+        let statusBadge = '';
+        if (sub.status === 'PENDING') {
+          statusBadge = `<span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">Chờ Admin duyệt</span>`;
+        } else if (sub.status === 'APPROVED') {
+          statusBadge = `<span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">Đã mở khóa File</span>`;
+        } else {
+          statusBadge = `<span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-rose-500/15 text-rose-400 border border-rose-500/30">Bị từ chối</span>`;
+        }
+
+        return `
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row justify-between gap-4">
+            <div class="space-y-1.5 flex-1">
+              <div class="flex flex-wrap items-center gap-2">
+                ${statusBadge}
+                <span class="text-xs text-slate-500">${formatTime(sub.submittedAt)}</span>
+              </div>
+              <h4 class="font-bold text-white text-sm sm:text-base">${escapeHTML(sub.taskTitle)}</h4>
+              <p class="text-xs text-slate-300 bg-slate-950 border border-slate-800 rounded-xl p-2.5">
+                <span class="text-slate-500 font-semibold">Ghi nhận:</span> ${escapeHTML(sub.proofText)}
+              </p>
+              ${sub.status === 'REJECTED' && sub.rejectReason ? `
+                <p class="text-xs text-rose-300 bg-rose-500/10 border border-rose-500/20 rounded-xl p-2.5">
+                  <strong>Lý do từ chối:</strong> ${escapeHTML(sub.rejectReason)}
+                </p>` : ''}
+            </div>
+            ${sub.proofImage ? `
+              <div class="shrink-0">
+                <img src="${sub.proofImage}" onclick="openLightbox('${sub.proofImage}')" alt="Ảnh bằng chứng"
+                  class="w-24 h-24 object-cover rounded-xl border border-slate-700 cursor-zoom-in hover:opacity-90" />
+              </div>` : ''}
+          </div>`;
+      }).join('');
+    }
+
+    // ==================== ADMIN AUTH & REVERSE MULTI-LAYER LINK4M BUILDER ====================
+    document.getElementById('admin-login-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const inputPwd = document.getElementById('admin-password-input').value;
+      if (inputPwd === ADMIN_PASSWORD) {
+        sessionStorage.setItem(STORAGE_KEYS.ADMIN_SESSION, 'true');
+        document.getElementById('admin-password-input').value = '';
+        switchMode('admin');
+        showToast('Đăng nhập quyền Quản trị viên thành công!', 'success');
+      } else {
+        showToast('Mật khẩu quản trị không chính xác!', 'error');
+      }
+    });
+
+    function togglePasswordVisibility() {
+      const inp = document.getElementById('admin-password-input');
+      const icon = document.getElementById('eye-icon');
+      if (inp.type === 'password') {
+        inp.type = 'text';
+        icon.setAttribute('data-lucide', 'eye-off');
+      } else {
+        inp.type = 'password';
+        icon.setAttribute('data-lucide', 'eye');
+      }
+      lucide.createIcons();
+    }
+
+    function adminLogout() {
+      sessionStorage.removeItem(STORAGE_KEYS.ADMIN_SESSION);
+      switchMode('user');
+      showToast('Đã khóa phiên Quản trị viên.', 'info');
+    }
+
+    function toggleLink4mBuilder() {
+      const type = document.getElementById('task-type').value;
+      const box = document.getElementById('link4m-builder-box');
+      if (type === 'LINK4M') {
+        box.classList.remove('hidden');
+        const baseInput = document.getElementById('link4m-base-web-url');
+        if (!baseInput.value) baseInput.value = getBaseWebUrl();
+      } else {
+        box.classList.add('hidden');
+      }
+    }
+
+    function extractLink4mShortUrl(payload) {
+      if (!payload) return '';
+      let obj = payload;
+      if (typeof obj === 'string') {
+        try {
+          obj = JSON.parse(obj);
+        } catch (_) {
+          const match = obj.match(/https?:\/\/[^\s"'<>]+/i);
+          return match ? match[0].replace(/\\\//g, '/').trim() : '';
+        }
+      }
+      const candidate =
+        obj.shortenedUrl ||
+        obj.short_url ||
+        obj.shortlink ||
+        obj.url ||
+        (obj.data && (obj.data.shortenedUrl || obj.data.short_url || obj.data.url)) ||
+        '';
+      return typeof candidate === 'string' ? candidate.replace(/\\\//g, '/').trim() : '';
+    }
+
+    function formatLink4mErrorMessage(payload, fallbackMsg) {
+      if (payload && typeof payload === 'object') {
+        if (payload.message) {
+          return Array.isArray(payload.message) ? payload.message.join(', ') : String(payload.message);
+        }
+        if (payload.msg) return String(payload.msg);
+        if (payload.error) return String(payload.error);
+      }
+      return fallbackMsg;
+    }
+
+    async function fetchJsonWithTimeout(url, timeoutMs = 10000) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const res = await fetch(url, { method: 'GET', signal: controller.signal, cache: 'no-store' });
+        const rawText = await res.text();
+        let parsed = rawText;
+        try {
+          parsed = JSON.parse(rawText);
+        } catch (_) {}
+        return { ok: res.ok, status: res.status, data: parsed, rawText };
+      } catch (err) {
+        if (err && err.name === 'AbortError') {
+          throw new Error('Quá thời gian phản hồi (timeout)');
+        }
+        throw err;
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+
+    async function callLink4mSingleLayer(apiToken, targetUrl) {
+      const cleanToken = String(apiToken || '').trim();
+      const cleanTarget = String(targetUrl || '').trim();
+      if (!cleanToken) {
+        throw new Error('Chưa nhập Link4m API Token.');
+      }
+      if (!cleanTarget) {
+        throw new Error('Thiếu URL đích cần rút gọn qua Link4m.');
+      }
+
+      const endpoints = [
+        `https://link4m.co/api-hang-loat/v2?api=${encodeURIComponent(cleanToken)}&url=${encodeURIComponent(cleanTarget)}`,
+        `https://link4m.co/api-shorten/v2?api=${encodeURIComponent(cleanToken)}&url=${encodeURIComponent(cleanTarget)}`
+      ];
+
+      const attempts = [];
+      for (const ep of endpoints) {
+        attempts.push({ label: 'Trực tiếp Link4m', url: ep, mode: 'direct' });
+        attempts.push({
+          label: 'Proxy CorsProxy',
+          url: `https://corsproxy.io/?${encodeURIComponent(ep)}`,
+          mode: 'raw'
+        });
+        attempts.push({
+          label: 'Proxy AllOrigins',
+          url: `https://api.allorigins.win/get?url=${encodeURIComponent(ep)}`,
+          mode: 'allorigins'
+        });
+      }
+
+      const errors = [];
+      for (const att of attempts) {
+        try {
+          const resp = await fetchJsonWithTimeout(att.url);
+          let payload = resp.data;
+
+          if (att.mode === 'allorigins') {
+            if (payload && typeof payload === 'object' && typeof payload.contents === 'string') {
+              try {
+                payload = JSON.parse(payload.contents);
+              } catch (_) {
+                payload = payload.contents;
+              }
+            }
+          }
+
+          if (payload && typeof payload === 'object' && payload.status === 'error') {
+            throw new Error(formatLink4mErrorMessage(payload, 'Link4m từ chối yêu cầu (kiểm tra lại API Token).'));
+          }
+
+          const shortUrl = extractLink4mShortUrl(payload);
+          if (shortUrl && /^https?:\/\//i.test(shortUrl)) {
+            return shortUrl;
+          }
+
+          if (!resp.ok) {
+            throw new Error(formatLink4mErrorMessage(payload, `HTTP ${resp.status}`));
+          }
+
+          throw new Error(formatLink4mErrorMessage(payload, 'Phản hồi không chứa shortenedUrl hợp lệ.'));
+        } catch (err) {
+          errors.push(`${att.label}: ${err.message || String(err)}`);
+        }
+      }
+
+      throw new Error(`Không thể kết nối API Link4m (${errors.join(' | ')})`);
+    }
+
+    async function generateMultiLayerLink4mWithGate() {
+      const token = state.link4mToken.trim();
+      const baseWebUrl = document.getElementById('link4m-base-web-url').value.trim() || getBaseWebUrl();
+      const totalLayers = parseInt(document.getElementById('link4m-layers').value, 10) || 1;
+      const logBox = document.getElementById('link4m-progress-log');
+      const btn = document.getElementById('btn-generate-link4m');
+
+      if (!token) {
+        showToast('Bạn chưa nhập Link4m API Token! Hãy cấu hình ở tab "Cấu hình API Link4m".', 'error');
+        switchAdminTab('api');
+        document.getElementById('input-link4m-token').focus();
+        return;
+      }
+
+      if (!baseWebUrl.startsWith('http')) {
+        showToast('URL gốc của trang web phải bắt đầu bằng http:// hoặc https:// (khuyến nghị deploy lên hosting thật trước).', 'error');
+        document.getElementById('link4m-base-web-url').focus();
+        return;
+      }
+
+      let taskId = document.getElementById('edit-task-id').value;
+      if (!taskId) {
+        taskId = 'task_' + Date.now();
+        document.getElementById('edit-task-id').value = taskId;
+      }
+      let autoToken = document.getElementById('task-auto-token').value;
+      if (!autoToken) {
+        autoToken = 'tok_' + generateRandomToken(12);
+        document.getElementById('task-auto-token').value = autoToken;
+      }
+
+      logBox.classList.remove('hidden');
+      logBox.innerHTML = `<div class="text-indigo-300">⏳ Bắt đầu tạo chuỗi ${totalLayers} tầng Link4m theo chiều ngược (Tầng ${totalLayers} → Tầng 1)...</div>`;
+      btn.disabled = true;
+      btn.classList.add('opacity-60', 'cursor-not-allowed');
+
+      try {
+        const finalUnlockUrl = `${baseWebUrl}?unlock=${encodeURIComponent(taskId)}&token=${encodeURIComponent(autoToken)}`;
+        logBox.innerHTML += `<div class="text-slate-400">🎯 Đích cuối (Tầng ${totalLayers}): Mở khóa tự động File Free</div>`;
+        logBox.innerHTML += `<div>🔄 Đang rút gọn <strong>Tầng ${totalLayers}/${totalLayers}</strong> qua Link4m...</div>`;
+        logBox.scrollTop = logBox.scrollHeight;
+
+        let nextLayerLink4mUrl = await callLink4mSingleLayer(token, finalUnlockUrl);
+        logBox.innerHTML += `<div class="text-emerald-400">✅ Link Tầng ${totalLayers}: <span class="underline">${escapeHTML(nextLayerLink4mUrl)}</span></div>`;
+        logBox.scrollTop = logBox.scrollHeight;
+
+        for (let k = totalLayers - 1; k >= 1; k--) {
+          const nextStepNumber = k + 1;
+          const gateUrl = `${baseWebUrl}?gate=1&task=${encodeURIComponent(taskId)}&step=${nextStepNumber}&total=${totalLayers}&next=${encodeURIComponent(nextLayerLink4mUrl)}`;
+
+          logBox.innerHTML += `<div class="text-amber-300">⏱️ Chèn Trang Đệm 3s giữa Tầng ${k} → Tầng ${nextStepNumber}</div>`;
+          logBox.innerHTML += `<div>🔄 Đang rút gọn <strong>Tầng ${k}/${totalLayers}</strong> qua Link4m...</div>`;
+          logBox.scrollTop = logBox.scrollHeight;
+
+          nextLayerLink4mUrl = await callLink4mSingleLayer(token, gateUrl);
+          logBox.innerHTML += `<div class="text-emerald-400">✅ Link Tầng ${k}: <span class="underline">${escapeHTML(nextLayerLink4mUrl)}</span></div>`;
+          logBox.scrollTop = logBox.scrollHeight;
+        }
+
+        document.getElementById('task-url').value = nextLayerLink4mUrl;
+        logBox.innerHTML += `<div class="text-emerald-300 font-bold pt-1">🎉 Hoàn tất! Đã gán Link Tầng 1 vào ô bên dưới. Nhớ bấm "Đăng nhiệm vụ & File Free" để lưu!</div>`;
+        logBox.scrollTop = logBox.scrollHeight;
+        showToast(`Đã tạo thành công chuỗi Link4m ${totalLayers} tầng kèm ${Math.max(0, totalLayers - 1)} trang đệm 3s!`, 'success');
+      } catch (err) {
+        logBox.innerHTML += `<div class="text-rose-400">❌ Lỗi API Link4m: ${escapeHTML(err.message)}</div>`;
+        showToast('Tạo link thất bại: ' + err.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.classList.remove('opacity-60', 'cursor-not-allowed');
+      }
+    }
+
+    document.getElementById('link4m-config-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      state.link4mToken = document.getElementById('input-link4m-token').value.trim();
+      saveLink4mToken();
+      updateAdminApiBadge();
+      showToast('Đã lưu Link4m API Token!', 'success');
+    });
+
+    async function testLink4mConnection() {
+      const token = document.getElementById('input-link4m-token').value.trim();
+      const resultBox = document.getElementById('api-test-result');
+      if (!token) {
+        showToast('Vui lòng nhập API Token trước khi test!', 'error');
+        return;
+      }
+      state.link4mToken = token;
+      saveLink4mToken();
+      updateAdminApiBadge();
+
+      resultBox.classList.remove('hidden');
+      resultBox.innerHTML = `<span class="text-indigo-300">⏳ Đang kiểm tra kết nối tới API Link4m.co...</span>`;
+
+      try {
+        const testShort = await callLink4mSingleLayer(token, 'https://google.com');
+        resultBox.innerHTML = `<span class="text-emerald-400">✅ Kết nối API Link4m thành công! Link test: ${escapeHTML(testShort)}</span>`;
+        showToast('API Link4m hoạt động tốt!', 'success');
+      } catch (err) {
+        resultBox.innerHTML = `<span class="text-rose-400">❌ Lỗi kết nối: ${escapeHTML(err.message)}</span>`;
+        showToast('Kiểm tra API thất bại.', 'error');
+      }
+    }
+
+    function updateAdminApiBadge() {
+      const badge = document.getElementById('admin-api-status-badge');
+      if (state.link4mToken) {
+        badge.className = 'px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-500/15 text-indigo-300 border border-indigo-500/30';
+        badge.textContent = 'API Link4m: Đã kết nối';
+      } else {
+        badge.className = 'px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-800 text-slate-400 border border-slate-700';
+        badge.textContent = 'API Link4m: Chưa nhập Token';
+      }
+    }
+
+    // ==================== ADMIN TASK CRUD & REVIEWS ====================
+    function renderAllAdminUI() {
+      const pendingCount = state.submissions.filter(s => s.status === 'PENDING').length;
+      document.getElementById('badge-admin-pending').textContent = pendingCount;
+      updateAdminApiBadge();
+      renderAdminTasks();
+      renderAdminSubmissions();
+      renderDeployCenter();
+    }
+
+    document.getElementById('admin-task-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      let taskId = document.getElementById('edit-task-id').value;
+      const title = document.getElementById('task-title').value.trim();
+      const fileMeta = document.getElementById('task-file-meta').value.trim();
+      const fileUrl = document.getElementById('task-file-url').value.trim();
+      const filePassword = document.getElementById('task-file-pass').value.trim();
+      const type = document.getElementById('task-type').value;
+      const layers = type === 'LINK4M' ? (parseInt(document.getElementById('link4m-layers').value, 10) || 1) : 0;
+      const autoToken = type === 'LINK4M' ? (document.getElementById('task-auto-token').value || 'tok_' + generateRandomToken(12)) : '';
+      const url = document.getElementById('task-url').value.trim();
+      const secretCode = document.getElementById('task-secret').value.trim();
+      const description = document.getElementById('task-desc').value.trim();
+
+      if (!title || !fileUrl || !url || !description) {
+        showToast('Vui lòng điền đầy đủ thông tin nhiệm vụ và link File Free!', 'error');
+        return;
+      }
+
+      const existingIdx = taskId ? state.tasks.findIndex(t => t.id === taskId) : -1;
+
+      if (existingIdx !== -1) {
+        state.tasks[existingIdx] = {
+          ...state.tasks[existingIdx],
+          title, fileMeta, fileUrl, filePassword, type, layers, autoToken, url, secretCode, description
+        };
+        showToast('Đã cập nhật nhiệm vụ & File Free!', 'success');
+      } else {
+        const newTask = {
+          id: taskId || ('task_' + Date.now()),
+          title,
+          fileMeta,
+          fileUrl,
+          filePassword,
+          type,
+          layers,
+          autoToken,
+          url,
+          secretCode,
+          description,
+          active: true,
+          createdAt: Date.now()
+        };
+        state.tasks.unshift(newTask);
+        showToast('Đã đăng nhiệm vụ nhận File Free mới!', 'success');
+      }
+
+      saveTasks();
+      resetTaskForm();
+      renderAllAdminUI();
+    });
+
+    function editTask(taskId) {
+      const task = state.tasks.find(t => t.id === taskId);
+      if (!task) return;
+
+      document.getElementById('edit-task-id').value = task.id;
+      document.getElementById('task-auto-token').value = task.autoToken || '';
+      document.getElementById('task-title').value = task.title;
+      document.getElementById('task-file-meta').value = task.fileMeta || '';
+      document.getElementById('task-file-url').value = task.fileUrl || '';
+      document.getElementById('task-file-pass').value = task.filePassword || '';
+      document.getElementById('task-type').value = task.type;
+      toggleLink4mBuilder();
+      if (task.type === 'LINK4M') {
+        document.getElementById('link4m-layers').value = task.layers || 2;
+        document.getElementById('link4m-base-web-url').value = getBaseWebUrl();
+      }
+      document.getElementById('task-url').value = task.url;
+      document.getElementById('task-secret').value = task.secretCode || '';
+      document.getElementById('task-desc').value = task.description;
+
+      document.getElementById('task-form-title').innerHTML = `<i data-lucide="edit-3" class="w-5 h-5 text-amber-400"></i><span>Chỉnh sửa nhiệm vụ</span>`;
+      document.getElementById('btn-save-task').innerHTML = `<i data-lucide="save" class="w-4 h-4"></i><span>Lưu thay đổi</span>`;
+      document.getElementById('btn-cancel-edit').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function resetTaskForm() {
+      document.getElementById('admin-task-form').reset();
+      document.getElementById('edit-task-id').value = '';
+      document.getElementById('task-auto-token').value = '';
+      document.getElementById('link4m-progress-log').classList.add('hidden');
+      document.getElementById('link4m-progress-log').innerHTML = '';
+      toggleLink4mBuilder();
+      document.getElementById('task-form-title').innerHTML = `<i data-lucide="folder-plus" class="w-5 h-5 text-indigo-400"></i><span>Tạo nhiệm vụ tặng File Free</span>`;
+      document.getElementById('btn-save-task').innerHTML = `<i data-lucide="check" class="w-4 h-4"></i><span>Đăng nhiệm vụ & File Free</span>`;
+      document.getElementById('btn-cancel-edit').classList.add('hidden');
+      lucide.createIcons();
+    }
+
+    function toggleTaskActive(taskId) {
+      const task = state.tasks.find(t => t.id === taskId);
+      if (!task) return;
+      task.active = !task.active;
+      saveTasks();
+      renderAdminTasks();
+      showToast(task.active ? 'Đã bật hiển thị nhiệm vụ.' : 'Đã tạm ẩn nhiệm vụ.', 'info');
+    }
+
+    function deleteTask(taskId) {
+      state.tasks = state.tasks.filter(t => t.id !== taskId);
+      saveTasks();
+      renderAllAdminUI();
+      showToast('Đã xóa nhiệm vụ.', 'info');
+    }
+
+    function renderAdminTasks() {
+      const container = document.getElementById('admin-tasks-list');
+      document.getElementById('admin-task-count').textContent = state.tasks.length;
+
+      if (state.tasks.length === 0) {
+        container.innerHTML = `<div class="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center text-slate-400 text-sm">Chưa có nhiệm vụ nào. Hãy tạo nhiệm vụ ở khung bên trái.</div>`;
+        return;
+      }
+
+      container.innerHTML = state.tasks.map(task => {
+        const meta = getTaskTypeMeta(task);
+        return `
+          <div class="bg-slate-900 border ${task.active ? 'border-slate-800' : 'border-slate-800/50 opacity-60'} rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div class="space-y-1.5 min-w-0">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="px-2 py-0.5 rounded text-[11px] font-semibold border ${meta.badgeClass}">${meta.label}</span>
+                <span class="text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">${escapeHTML(task.fileMeta)}</span>
+                ${task.type === 'LINK4M' ? `<span class="text-[11px] bg-indigo-500/15 text-indigo-300 px-2 py-0.5 rounded">Auto-Unlock</span>` : ''}
+                ${!task.active ? `<span class="text-[11px] bg-rose-500/20 text-rose-300 px-2 py-0.5 rounded">Đang ẩn</span>` : ''}
+              </div>
+              <h4 class="font-bold text-white text-sm sm:text-base truncate">${escapeHTML(task.title)}</h4>
+              <div class="text-xs text-slate-400 truncate">
+                Link Tầng 1: <a href="${escapeHTML(task.url)}" target="_blank" class="text-indigo-400 hover:underline">${escapeHTML(task.url)}</a>
+              </div>
+              <div class="text-xs text-slate-400 truncate">
+                Link File Free: <a href="${escapeHTML(task.fileUrl)}" target="_blank" class="text-emerald-400 hover:underline">${escapeHTML(task.fileUrl)}</a>
+                ${task.filePassword ? ` • Pass: <span class="text-amber-300 font-mono">${escapeHTML(task.filePassword)}</span>` : ''}
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2 shrink-0">
+              <button type="button" onclick="toggleTaskActive('${task.id}')" title="${task.active ? 'Tạm ẩn' : 'Kích hoạt'}"
+                class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition">
+                <i data-lucide="${task.active ? 'eye' : 'eye-off'}" class="w-4 h-4"></i>
+              </button>
+              <button type="button" onclick="editTask('${task.id}')" title="Sửa nhiệm vụ"
+                class="p-2 rounded-xl bg-slate-800 hover:bg-indigo-600 text-slate-300 hover:text-white transition">
+                <i data-lucide="pencil" class="w-4 h-4"></i>
+              </button>
+              <button type="button" onclick="deleteTask('${task.id}')" title="Xóa nhiệm vụ"
+                class="p-2 rounded-xl bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white transition">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>`;
+      }).join('');
+
+      lucide.createIcons();
+    }
+
+    function renderAdminSubmissions() {
+      const container = document.getElementById('admin-submissions-list');
+      const filter = document.getElementById('filter-admin-submissions').value;
+      const list = state.submissions.filter(s => filter === 'ALL' || s.status === filter);
+
+      if (list.length === 0) {
+        container.innerHTML = `<div class="col-span-full bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center text-slate-400 text-sm">Không có lượt nộp bằng chứng nào trong mục này.</div>`;
+        return;
+      }
+
+      container.innerHTML = list.map(sub => {
+        let statusChip = '';
+        if (sub.status === 'PENDING') statusChip = `<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-500/20 text-amber-300">Chờ duyệt</span>`;
+        if (sub.status === 'APPROVED') statusChip = `<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-500/20 text-emerald-400">Đã cấp File</span>`;
+        if (sub.status === 'REJECTED') statusChip = `<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-rose-500/20 text-rose-400">Từ chối</span>`;
+
+        return `
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 flex flex-col justify-between gap-4">
+            <div class="space-y-2.5">
+              <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2">
+                  <span class="font-bold text-indigo-400 text-sm">@${escapeHTML(sub.username)}</span>
+                  ${statusChip}
+                </div>
+                <span class="text-[11px] text-slate-500">${formatTime(sub.submittedAt)}</span>
+              </div>
+
+              <div class="text-xs text-slate-400">
+                File yêu cầu: <strong class="text-slate-200">${escapeHTML(sub.taskTitle)}</strong>
+              </div>
+
+              <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 whitespace-pre-line">
+                ${escapeHTML(sub.proofText)}
+              </div>
+
+              ${sub.proofImage ? `
+                <div>
+                  <div class="text-[11px] text-slate-400 mb-1">Ảnh bằng chứng (bấm để phóng to):</div>
+                  <img src="${sub.proofImage}" onclick="openLightbox('${sub.proofImage}')" alt="Proof"
+                    class="max-h-44 rounded-xl border border-slate-700 cursor-zoom-in object-contain" />
+                </div>` : ''}
+
+              ${sub.status === 'REJECTED' && sub.rejectReason ? `
+                <div class="text-xs text-rose-300">Lý do từ chối: ${escapeHTML(sub.rejectReason)}</div>` : ''}
+            </div>
+
+            ${sub.status === 'PENDING' ? `
+              <div class="flex gap-2.5 pt-3 border-t border-slate-800">
+                <button type="button" onclick="approveSubmission('${sub.id}')"
+                  class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition">
+                  <i data-lucide="folder-check" class="w-4 h-4"></i>
+                  <span>Duyệt & Cấp File</span>
+                </button>
+                <button type="button" onclick="openRejectModal('${sub.id}')"
+                  class="px-3.5 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 font-semibold text-xs py-2.5 rounded-xl flex items-center justify-center gap-1 transition">
+                  <i data-lucide="x-circle" class="w-4 h-4"></i>
+                  <span>Từ chối</span>
+                </button>
+              </div>` : ''}
+          </div>`;
+      }).join('');
+
+      lucide.createIcons();
+    }
+
+    function approveSubmission(subId) {
+      const sub = state.submissions.find(s => s.id === subId);
+      if (!sub || sub.status !== 'PENDING') return;
+
+      sub.status = 'APPROVED';
+      saveSubmissions();
+      renderAllAdminUI();
+      showToast(`Đã duyệt và mở khóa File Free cho @${sub.username}!`, 'success');
+    }
+
+    function openRejectModal(subId) {
+      document.getElementById('reject-submission-id').value = subId;
+      document.getElementById('reject-reason-text').value = '';
+      document.getElementById('modal-reject-reason').classList.remove('hidden');
+    }
+
+    function closeRejectModal() {
+      document.getElementById('modal-reject-reason').classList.add('hidden');
+    }
+
+    document.getElementById('reject-reason-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const subId = document.getElementById('reject-submission-id').value;
+      const reason = document.getElementById('reject-reason-text').value.trim();
+      const sub = state.submissions.find(s => s.id === subId);
+
+      if (sub) {
+        sub.status = 'REJECTED';
+        sub.rejectReason = reason || 'Bằng chứng chưa hợp lệ.';
+        saveSubmissions();
+        renderAllAdminUI();
+        showToast('Đã từ chối lượt nộp bằng chứng.', 'info');
+      }
+      closeRejectModal();
+    });
+
+    // ==================== BACKUP / IMPORT / RESET ====================
+    function exportSystemData() {
+      const payload = {
+        exportedAt: new Date().toISOString(),
+        tasks: state.tasks,
+        submissions: state.submissions
+      };
+      const jsonStr = JSON.stringify(payload, null, 2);
+      const box = document.getElementById('json-data-box');
+      box.value = jsonStr;
+      copyTextToClipboard(jsonStr, 'Đã xuất và sao chép JSON vào bộ nhớ tạm!');
+    }
+
+    function importSystemData() {
+      const raw = document.getElementById('json-data-box').value.trim();
+      if (!raw) {
+        showToast('Vui lòng dán chuỗi JSON vào khung trước khi nạp!', 'error');
+        return;
+      }
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed.tasks)) {
+          state.tasks = parsed.tasks;
+          saveTasks();
+        }
+        if (Array.isArray(parsed.submissions)) {
+          state.submissions = parsed.submissions;
+          saveSubmissions();
+        }
+        renderAllAdminUI();
+        showToast('Nạp dữ liệu JSON thành công!', 'success');
+      } catch (err) {
+        showToast('Chuỗi JSON không hợp lệ!', 'error');
+      }
+    }
+
+    function resetToDefaultSamples() {
+      state.tasks = [...SAMPLE_TASKS];
+      saveTasks();
+      renderAllAdminUI();
+      showToast('Đã khôi phục 3 nhiệm vụ tặng File mẫu.', 'success');
+    }
+
+    // ==================== REAL-WORLD INTERNET DEPLOYMENT CENTER ====================
+    function renderDeployCenter() {
+      runRealWorldChecklist(false);
+      selectDeployGuidePlatform(state.activeDeployPlatform || 'github');
+      lucide.createIcons();
+    }
+
+    function runRealWorldChecklist(showFeedback = true) {
+      const container = document.getElementById('real-deploy-checklist');
+      if (!container) return;
+
+      const activeTasksCount = state.tasks.filter(t => t.active).length;
+      const hasToken = Boolean(state.link4mToken && state.link4mToken.trim());
+      const isPublicHttp = window.location.protocol === 'https:' || window.location.protocol === 'http:';
+      const hasCoreFlows = typeof showCountdownGate === 'function' && typeof processAutoUnlockFromUrl === 'function';
+
+      const items = [
+        {
+          ok: true,
+          label: 'File index.html tự đầy đủ',
+          note: '1 file duy nhất, không cần build tool'
+        },
+        {
+          ok: activeTasksCount > 0,
+          label: 'Nhiệm vụ File Free sẵn sàng',
+          note: `${activeTasksCount} nhiệm vụ đang mở`
+        },
+        {
+          ok: hasToken,
+          label: 'Link4m API Token',
+          note: hasToken ? 'Đã cấu hình Token' : 'Chưa nhập Token (tùy chọn)'
+        },
+        {
+          ok: isPublicHttp && hasCoreFlows,
+          label: 'Định tuyến ?gate=1 & ?unlock=',
+          note: isPublicHttp ? 'Sẵn sàng trên URL hiện tại' : 'Nên chạy trên host HTTP/HTTPS'
+        }
+      ];
+
+      container.innerHTML = items.map(it => `
+        <div class="bg-slate-950/90 border ${it.ok ? 'border-emerald-500/30' : 'border-amber-500/30'} rounded-xl p-3.5 flex items-start gap-2.5">
+          <i data-lucide="${it.ok ? 'check-circle-2' : 'alert-circle'}" class="w-4 h-4 shrink-0 mt-0.5 ${it.ok ? 'text-emerald-400' : 'text-amber-400'}"></i>
+          <div class="min-w-0">
+            <div class="text-xs font-bold text-white truncate">${escapeHTML(it.label)}</div>
+            <div class="text-[11px] ${it.ok ? 'text-emerald-300/90' : 'text-amber-300/90'} mt-0.5">${escapeHTML(it.note)}</div>
+          </div>
+        </div>
+      `).join('');
+
+      lucide.createIcons();
+      if (showFeedback) {
+        showToast('Đã kiểm tra xong checklist triển khai internet.', 'success');
+      }
+    }
+
+    function selectDeployGuidePlatform(platformKey) {
+      if (!DEPLOY_GUIDES[platformKey]) platformKey = 'github';
+      state.activeDeployPlatform = platformKey;
+
+      Object.keys(DEPLOY_GUIDES).forEach(key => {
+        const btn = document.getElementById(`guide-plat-${key}`);
+        if (!btn) return;
+        if (key === platformKey) {
+          btn.className = 'p-3 rounded-xl border border-indigo-500 bg-indigo-500/15 text-white text-left transition flex flex-col gap-0.5';
+        } else {
+          btn.className = 'p-3 rounded-xl border border-slate-800 bg-slate-950 text-slate-300 hover:border-slate-700 text-left transition flex flex-col gap-0.5';
+        }
+      });
+
+      renderDeployWizard();
+      lucide.createIcons();
+    }
+
+    function renderDeployWizard() {
+      const guide = DEPLOY_GUIDES[state.activeDeployPlatform] || DEPLOY_GUIDES.github;
+      const ownerInput = document.getElementById('wizard-owner');
+      const repoInput = document.getElementById('wizard-repo');
+      const liveUrlEl = document.getElementById('wizard-live-url');
+      const badgeEl = document.getElementById('wizard-platform-badge');
+      const stepsContainer = document.getElementById('deploy-wizard-steps');
+
+      if (!guide || !stepsContainer) return;
+
+      const ownerVal = ownerInput ? ownerInput.value : 'ten-cua-ban';
+      const repoVal = repoInput ? repoInput.value : 'filequest-free';
+      const previewUrl = guide.buildUrl(ownerVal, repoVal);
+
+      if (badgeEl) badgeEl.textContent = guide.badge;
+      if (liveUrlEl) liveUrlEl.textContent = previewUrl;
+
+      stepsContainer.innerHTML = guide.steps.map((st, idx) => `
+        <div class="bg-slate-950/90 border border-slate-800 rounded-xl p-4 flex items-start gap-3">
+          <div class="w-6 h-6 rounded-lg bg-indigo-500/15 border border-indigo-500/40 text-indigo-300 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">
+            ${idx + 1}
+          </div>
+          <div class="space-y-1">
+            <div class="text-xs sm:text-sm font-bold text-white">${escapeHTML(st.title)}</div>
+            <p class="text-xs text-slate-400 leading-relaxed">${escapeHTML(st.desc)}</p>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function applyWizardUrlToLink4mBuilder() {
+      const liveUrlEl = document.getElementById('wizard-live-url');
+      const baseInput = document.getElementById('link4m-base-web-url');
+      if (!liveUrlEl || !baseInput) return;
+
+      const chosenUrl = liveUrlEl.textContent.trim();
+      if (!chosenUrl) return;
+
+      baseInput.value = chosenUrl;
+      switchAdminTab('tasks');
+      document.getElementById('task-type').value = 'LINK4M';
+      toggleLink4mBuilder();
+      showToast(`Đã áp dụng URL ${chosenUrl} vào ô URL gốc của trình tạo Link4m!`, 'success');
+    }
+
+    function triggerFileDownload(filename, content, mimeType) {
+      const blob = new Blob([content], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    function getStandaloneHtmlString() {
+      return '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+    }
+
+    function downloadStandaloneIndexHtml() {
+      try {
+        triggerFileDownload('index.html', getStandaloneHtmlString(), 'text/html;charset=utf-8');
+        showToast('Đã tải xuống file index.html hoàn chỉnh!', 'success');
+      } catch (err) {
+        showToast('Không thể tải file: ' + err.message, 'error');
+      }
+    }
+
+    function copyStandaloneHtmlSource() {
+      try {
+        copyTextToClipboard(getStandaloneHtmlString(), 'Đã sao chép toàn bộ mã nguồn index.html!');
+      } catch (err) {
+        showToast('Không thể sao chép mã nguồn.', 'error');
+      }
+    }
+
+    function downloadNoJekyllFile() {
+      triggerFileDownload('.nojekyll', '', 'text/plain;charset=utf-8');
+      showToast('Đã tải xuống file .nojekyll!', 'success');
+    }
+
+    function downloadReadmeFile() {
+      const readme = `# FileQuest — Làm Nhiệm Vụ Nhận File Free\n\n` +
+        `Ứng dụng giao diện đơn file \`index.html\` hỗ trợ:\n` +
+        `- Vượt link Link4m đa tầng chèn trang đệm đếm ngược 3s (\`?gate=1\`) và tự động cấp File Free (\`?unlock=...\`).\n` +
+        `- Nộp bằng chứng ảnh chụp màn hình / mã xác nhận và lưu tài nguyên vào **Kho File Đã Nhận**.\n` +
+        `- Khu vực Admin (mật khẩu mặc định: \`nhiemvufile\`).\n\n` +
+        `## Triển khai lên internet miễn phí\n` +
+        `1. **GitHub Pages:** Tải \`index.html\` (và \`.nojekyll\`) lên repository công khai → bật **Settings > Pages** (nhánh main, thư mục /).\n` +
+        `2. **Cloudflare Pages / Netlify Drop / Vercel:** Đưa thư mục chứa \`index.html\` lên nền tảng để nhận liên kết HTTPS công khai.\n`;
+      triggerFileDownload('README.md', readme, 'text/markdown;charset=utf-8');
+      showToast('Đã tải xuống file README.md!', 'success');
+    }
+
+    function openLightbox(src) {
+      document.getElementById('lightbox-img').src = src;
+      document.getElementById('modal-lightbox').classList.remove('hidden');
+    }
+
+    // ==================== INITIALIZE & URL ROUTER ====================
+    window.addEventListener('DOMContentLoaded', () => {
+      loadState();
+      toggleLink4mBuilder();
+
+      const params = new URLSearchParams(window.location.search);
+
+      // Route 1: Intermediate 3-Second Countdown Gate (?gate=1&task=...&step=...&total=...&next=...)
+      if (params.get('gate') === '1' && params.get('next')) {
+        const taskId = params.get('task') || '';
+        const step = parseInt(params.get('step'), 10) || 2;
+        const total = parseInt(params.get('total'), 10) || 3;
+        const nextUrl = params.get('next');
+
+        showCountdownGate({
+          taskId,
+          step,
+          total,
+          nextUrl,
+          isDemo: false
+        });
+        lucide.createIcons();
+        return;
+      }
+
+      // Route 2: Final Layer Auto-Unlock (?unlock=<taskId>&token=<autoToken>)
+      if (params.get('unlock')) {
+        const unlockTaskId = params.get('unlock');
+        const unlockToken = params.get('token') || '';
+        renderAllUserUI();
+        processAutoUnlockFromUrl(unlockTaskId, unlockToken);
+        lucide.createIcons();
+        return;
+      }
+
+      // Default Route: Main User View
+      renderAllUserUI();
+      lucide.createIcons();
+    });
+  </script>
+</body>
+</html>
